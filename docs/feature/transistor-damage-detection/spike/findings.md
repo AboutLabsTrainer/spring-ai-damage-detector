@@ -1,6 +1,6 @@
 # SPIKE findings: transistor-damage-detection (Phase 1, throwaway probe)
 
-Date: 2026-10-29. Probe code (kept until promotion gate): `/tmp/claude-1000/-home-ibb-tux-GitHub-spring-ai-damage-detector/61e3cdae-98fd-4ce4-acda-afc73c0bb548/scratchpad/spike_transistor_damage_detection/probe.py`. Raw responses: `cache.jsonl` in the same folder.
+Date: 2026-10-29. **Promoted on 2026-10-29** (variant A) into the walking skeleton, commit `89c9f4d`; the probe directory was deleted after promotion. Former probe code: `/tmp/claude-1000/-home-ibb-tux-GitHub-spring-ai-damage-detector/61e3cdae-98fd-4ce4-acda-afc73c0bb548/scratchpad/spike_transistor_damage_detection/probe.py`. Raw responses: `cache.jsonl` in the same folder.
 
 ## Probe question
 Does at least one pipeline reach **zero false passes** on all 40 defect images while auto-passing at least 80% of good images?
