@@ -1,0 +1,69 @@
+journey: qs-scrap-documentation
+status: seed / unvalidated   # showcase project (E6); 0 customer interviews; illustrative persona
+created: 2026-10-29
+feature: transistor-damage-detection
+sources:
+  E1: docs/brief.md (single stakeholder input)
+  E2: user statement "images taken automatically from a camera (top view)" (single stakeholder statement) + images/ folder inspection (253 PNGs, 1024x1024, 5 classes)
+  E3: dataset is public MVTec AD "transistor" (CC BY-NC-SA 4.0), confirmed by the user (E7)
+  E4: TypeSafe Jev / System One API docs (text/structured input only)
+  E5: open questions (partly answered in E6)
+  E7: user answers 2026-10-29 - only good parts pass (zero false passes); folder labels are demo-data structure, not input; batch mode; cheapest Claude model (claude-haiku-5-5)
+  E6: user answers 2026-10-29 - showcase project; record consumers = reporting and line feedback; cloud APIs OK for demo, data residency deferred
+
+persona:
+  id: P1
+  name: QS inspector, transistor production line
+  status: illustrative showcase persona, unvalidated (E6)
+  source: [E1]
+  context: >
+    Reviews top-view images of TO-92 transistors placed on a board. The user states the images come
+    from an automatic top-view camera (E2, single stakeholder statement). The dataset matches public
+    MVTec AD (E3), so whether a live line camera feeds QS is unverified.
+  unknowns: [current detection/documentation method (not applicable for the showcase, E6)]
+
+secondary_persona:
+  id: P2
+  name: Defect-record consumer (audit/reporting and line process feedback)
+  status: illustrative (E6)
+  source: [E6]
+
+opportunity_statement: >
+  Minimize the time QS spends, and the chance of a missed or wrongly categorized defect,
+  when deciding whether a placed transistor passes and documenting each scrap case
+  with its image and a textual reason.
+opportunity_score: not scored (no importance/satisfaction data)
+
+jobs:
+  - id: J1
+    statement: Decide pass vs scrap for each placed transistor and record why it was scrapped
+    source: [E1, E2]
+    status: unvalidated
+    steps:
+      - step: Locate
+        description: A camera image of the placed transistor becomes available
+        outcome: Minimize the time from image capture to inspection decision
+        source: [E2]
+      - step: Confirm
+        description: Classify as GOOD, MISPLACED, DAMAGED_CASE, CUT_LEAD or BENT_LEAD
+        outcome: Minimize the likelihood that a defective transistor is passed as GOOD
+        source: [E1]
+        outcome_source: inferred (wave-decisions D6), not stated by a customer
+      - step: Execute
+        description: Record the defect with its image and a textual description
+        outcome: Minimize the effort to produce a complete scrap record
+        source: [E1]
+      - step: Monitor
+        description: Uncertain cases are reviewed by a human (hypothesis, via confidence threshold)
+        outcome: Minimize uncertainty about which decisions need human review
+        source: [E4]
+        status: hypothesis
+      - step: Conclude
+        description: Scrap record reaches its consumer
+        outcome: Minimize the time from defect detection to record available to its consumer
+        source: [E5]
+        status: unknown consumer
+
+validation_needed:
+  - Mom Test with 1-3 QS people (last defect found, what was recorded, what happened to the record)
+  - Feasibility SPIKE (vision LLM -> structured description -> Jev choice; false-pass rate, recall per class)

@@ -1,0 +1,19 @@
+spring:
+  main:
+    banner-mode: off
+    web-application-type: none
+  http:
+    client:
+      connect-timeout: 10s
+      read-timeout: 120s
+
+logging:
+  level:
+    root: warn
+
+detector:
+  pass-threshold: 0.86
+  jev:
+    base-url: https://openrouter.ai
+    model: typesafe/jev-1.13
+    api-key: ${OPENROUTER_API_KEY:}

@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.*
+
+# Demo data (MVTec AD, 312 MB) - not committed
+/images/
+
+# Build
+target/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.DS_Store
+# nWave activation marker (keep .nwave/local-config.json trackable)
+.nwave/*
+!.nwave/local-config.json
