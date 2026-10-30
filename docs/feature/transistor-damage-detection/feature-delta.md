@@ -467,3 +467,327 @@ JTBD traceability: US-01 and US-02 → J2, US-03 → J1, US-04 → J3. No story 
 - **Constraints carried forward:** C1, C2, C3, C7, C10, C11, C12; Jev via OpenRouter alpha; key from the environment only.
 - **Upstream changes:** see Changed Assumptions (Qwen removed, batch failure behaviour, recall definition, threshold check as a feature).
 - **Handoff:** DESIGN (nw-solution-architect) gets all sections. DEVOPS (nw-platform-architect) gets US-04 and KPIs K4/K5.
+
+## Wave: DESIGN / [REF] Options considered
+
+Date 2026-10-30. Mode: PROPOSE. Density: lean. Scope: application. Paradigm: OOP (`CLAUDE.md`). Status: **Option A, confirmed by the user on 2026-10-30.**
+
+- **A (recommended): extend the skeleton in place.** One jar is kept as a modular monolith with ports and adapters. `--evaluate` is a second use case that shares the per-image inspection path. Retry is a plain decorator on the `Jev` port, and a sealed `JevOutcome` makes "a failed image passes" impossible to represent. One central CLI error mapper handles all errors, and startup probes run before any paid call. No new runtime dependency (ArchUnit is test-only).
+- **B: framework-driven variant of A.** Spring Retry with `@Retryable`/`@Recover` (+ spring-aspects/AOP) handles retry. Spring Boot `FailureAnalyzer` and `ExitCodeExceptionMapper` handle errors. Trade-off: less hand-written code, but there are 2 new dependencies, and Spring Retry is in maintenance mode. FailureAnalyzer prints multi-line blocks (which breaks INV-5's one-line rule), and an unreadable answer must still be mapped by hand.
+- **C: separate evaluation tool plus Resilience4j.** A second module or main class joins `report.json` with folder labels, and Resilience4j handles retry. Trade-off: the production jar has no evaluation code. But it contradicts D15 (same jar, one command), needs a two-step workflow, and adds a library whose circuit-breaker value is out of scope.
+
+Recommendation is **A**. It fits D15, adds the fewest dependencies, puts INV-1 in the type system, and keeps INV-5 at one test point.
+
+## Wave: DESIGN / [REF] DDD list
+
+Decision numbers use DDD-n to avoid clashing with D1–D23.
+
+- **DDD-1:** A single Spring Boot non-web jar, structured as a modular monolith with ports and adapters: `domain/` (pure), `batch/`, `evaluate/`, `jev/`, `cli/`. The evaluate mode is in the same jar (ADR-001).
+- **DDD-2:** The sealed domain type `JevOutcome` is either `Judged(JevJudgement)` or `Failed(attempts, reason)`. The `Jev` port returns an outcome and never throws for call failures. `PassPolicy` maps `Failed` to REVIEW with an exhaustive switch. `Inspection` stores the outcome. INV-1 and INV-4 therefore hold structurally (ADR-003).
+- **DDD-3:** Batch and evaluate share one per-image inspection path: `inspection/Inspector` reads bytes via `ImageFolder`, asks `Jev`, then applies `PassPolicy`.
+  - `ImageFolder` returns **relative path strings only** and knows nothing about labels.
+  - A `Label` is resolved **only in `evaluate/LabelledEvaluation`**, as a pure function from relative path to optional label. It never reaches `inspection/` or `jev/` (C11).
+  - ArchUnit rule 2 enforces that `inspection..` and `jev..` do not depend on `evaluate..`, `batch..`, `cli..` or `domain.Label`.
+- **DDD-4:** Evaluation metrics and the threshold sweep are pure domain functions over the recorded outcome per image. They re-apply `PassPolicy(t)`:
+  - Thresholds are handled in hundredths (0.50…0.99).
+  - The configured t is always included in the sweep, even if it is off-grid.
+  - The configured-t row equals the headline by construction (D17, US-02 AC).
+- **DDD-5:** Retry is the `RetryingJev` decorator, which implements `Jev` and wraps a single-attempt `OpenRouterJev`. It adds no new dependency, and its sleeper is injected (ADR-004).
+- **DDD-6:**
+  - Transient failures are retried: connection errors, timeouts, HTTP 408, 429 and 5xx, an unreadable or empty answer.
+  - Other 4xx errors are not retried; the description then reads `Jev call failed after 1 attempt: HTTP 401 Unauthorized`.
+  - A 429 with `Retry-After` at or below `max-backoff` waits that long. **Above the cap there is no early retry.** The attempt counts as transient, but the decorator gives up at once: `Failed(attempts, "HTTP 429 Too Many Requests (Retry-After <n> s exceeds max-backoff)")`.
+  - Reason texts never contain request data or the key (INV-3).
+  - See UC-1.
+- **DDD-7:** Retry configuration keys: `detector.jev.retry.max-attempts` (default 3, ≥ 1), `detector.jev.retry.initial-backoff` (default 1s, doubling), `detector.jev.retry.max-backoff` (default 10s).
+- **DDD-8:** One central `cli/ErrorFeedback` mapper turns typed refusals and any unexpected exception into one stderr line plus an exit code. It is used at two catch points: inside the CLI runner, and in `main()` around start-up (binding and wiring errors). The INV-5 texts are the defaults (ADR-005).
+- **DDD-9:** Exit codes are 0 OK, 1 refused/unexpected, 2 false pass at the configured t (D18), 3 zero images judged (D14). Precedence is 1 > 3 > 2. Reports are written for codes 2 and 3. See UC-2.
+- **DDD-10:** Wire, then probe, then use. Probes run in the bootstrap order defined in brief.md and ADR-005:
+  - **Before Spring, in `main`:**
+    1. arguments, including unknown options
+    2. input exists, and the output is not the same as or inside the input (real paths, no write)
+    3. create `--output`
+    4. write probe
+    5. set the log file
+  - **After Spring starts, in `DetectorCommand`:**
+    6. the input has images or labelled images
+    7. the API key is present
+
+  Bean construction no longer validates the key. There is no network or paid Jev probe, because D14/US-03 require a written report on a 401.
+- **DDD-11:** Logging:
+  - The console log is off by default; `--debug` restores it.
+  - Details and stack traces go **only** to `<output>/damage-detector.log` (user decision 2026-10-30). There is **no temp-dir fallback**.
+  - The path is injected by the composition root: `LogSink` sets it as a SpringApplication default property in bootstrap step 5, after the output folder exists and has passed its probe. It is not set in ambient `application.yml`.
+  - A refusal in bootstrap steps 1–4 has no log file; its stderr line is the complete feedback.
+- **DDD-12:** Unknown CLI options are refused with the usage line. Dotted properties and the Spring flags `debug` and `trace` are allowed. This guards against a typo turning `--evaluate` into a paid batch run.
+- **DDD-13:** Labels:
+  - The label is the first path segment below `--input`, matched exactly against `good`, `bent_lead`, `cut_lead`, `damaged_case`, `misplaced`. Deeper nesting is allowed.
+  - Other images are skipped, counted and never sent.
+  - At least 1 labelled image is required; otherwise the run is refused with exit 1 and 0 calls.
+  - A class with 0 images is shown with 0 rows.
+- **DDD-14:** Evaluate writes only `evaluation.md` and `evaluation.json`, with no scrap/review copies (slice-01 OUT).
+  - `evaluation.md` includes the run date (from an injected `Clock`; Jev varies between runs), the false-pass list, the per-class table, sweep rows 0.80–0.95 plus the configured t, the lowest-safe-t line, and the MVTec AD attribution.
+  - `evaluation.json` has, per image: path, label, verdict, jevChoice, P(GOOD) and jevError, plus all 50 sweep rows.
+- **DDD-15:** The batch report gains a summary `jevErrors` and `judged`, and a per-image `jevError` flag. Failed images have no choice or probabilities. The console line gains `; N Jev errors in REVIEW`.
+  - Cost is summed over the `usage.cost` of judged attempts only.
+  - The cost of failed attempts is **unknown and not counted**.
+  - When there were retries or Jev errors, the console line and report.md say the reported cost is a lower bound (ADR-004).
+- **DDD-16:** D14 also applies in evaluate mode: exit 3 if 0 images were judged.
+- **DDD-17:** ArchUnit 1.4.x (test scope; exact patch verified in DELIVER step 1) enforces **8 rules**. All of them block the build, and the same 8 are listed in brief.md under "Enforcement":
+  1. `domain..` depends only on `domain..`, `java.lang..`, `java.util..` and `java.time..` (allow-list).
+  2. `inspection..` and `jev..` do not depend on `evaluate..`, `batch..`, `cli..` or `domain.Label`.
+  3. Only `cli.ErrorFeedback` and `cli.DetectorCommand` access `System.out` or `System.err`.
+  4. `ImageFolder`, `OutputFolder` and `RetryingJev` implement `probe.Probe`.
+  5. Only `DetectorConfiguration` constructs `OpenRouterJev`. `OpenRouterJev` does not implement `Jev`, and `RetryingJev` is the only `Jev` implementation.
+  6. **Writes happen only in `inspection.OutputFolder`.** This covers:
+     - `Files.write`, `writeString`, `copy`, `move`, `createDirectory`, `createDirectories`, `createFile`, `createTempFile`, `delete`, `deleteIfExists`, `newOutputStream`, `newBufferedWriter`, `newByteChannel`;
+     - constructing `FileOutputStream`, `FileWriter`, `RandomAccessFile` or `PrintWriter(File/String)`;
+     - the `java.io.File` mutators `delete`, `mkdir`, `mkdirs`, `renameTo`, `createNewFile`, `setWritable`;
+     - Jackson `writeValue(File|Path|OutputStream)`.
+  7. **Reads happen only in `inspection.ImageFolder`.** This covers:
+     - `Files.walk`, `list`, `find`, `lines`, `readAllBytes`, `readString`, `readAllLines`, `newInputStream`, `newBufferedReader`;
+     - constructing `FileInputStream` or `FileReader`.
+  8. Layered dependencies follow the allowed-edges table in brief.md. This includes "`batch` and `evaluate` never depend on each other".
+- **DDD-18:** The Docker contract adds no code beyond DDD-10. It covers `OPENROUTER_API_KEY` from the run-time env, input mounted read-only, output mounted writable by the host user, and the same flags. The output probe turns a bad mount into `Cannot write to output folder /out: permission denied`.
+
+Added after peer review iteration 1:
+
+- **DDD-19:** `OpenRouterJev` returns the package-private sealed `jev/AttemptResult` (answered, transient, permanent) and does not implement `Jev`. `RetryingJev` is the only `Jev` implementation and maps an attempt result to a `JevOutcome` (ADR-004).
+- **DDD-20:** The shared per-image path and all file access live in a new `inspection/` package:
+  - `Inspector`
+  - `ImageFolder`, the **single read port**: root = `--input`, read-only. It returns relative path strings and the bytes for one relative path.
+  - `OutputFolder`, the **single write port**: root = `--output`. It rejects paths that escape the root.
+
+  There is no separate `InputImages` type (merged into `ImageFolder`). `ReportWriter` reads the source images for its copies through `ImageFolder`, never through a raw `Path`. `batch/` and `evaluate/` depend on `inspection/` and never on each other (ArchUnit rule 8).
+- **DDD-21:** `probe/Probe` is the probe contract (ok or refused). It is implemented by `ImageFolder`, `OutputFolder` and `RetryingJev`. Allowed edges into `probe`: `cli`, `inspection`, `jev` and root (brief.md allowed-edges table). The declared `--output` write universe per run type is in brief.md.
+- **DDD-22:** The bootstrap refuses when `--output` is **the same as or inside** `--input` (resolves OQ-4).
+  - The comparison uses real paths: the input via `toRealPath`; an output that does not exist yet via the `toRealPath` of its nearest existing ancestor plus the remaining segments. It uses `isSameFile` for equality and component-wise `startsWith` for containment. This also covers symlinks and `..`.
+  - The check writes nothing and runs before the output folder is created.
+  - Message: `Output folder <o> is the same as or inside input folder <i>: choose an output outside the input`. Exit 1, 0 Jev calls.
+- **DDD-23:** The Jev read timeout is 30 s, down from 120 s (resolves OQ-1). It is set as `detector.jev.read-timeout`, with `detector.jev.connect-timeout` at 10 s, and the composition root applies both to the Jev client.
+  - K5 holds for runs with **up to 3 hanging images**: about 579 s. 4 hanging images take about 671 s and break it.
+  - UC-4 confirmed 2026-10-30.
+- **DDD-24:** The C11 assertion is made precise (UC-3). The fixed class vocabulary in `DefectQuestion` is allowed. Per-image paths, file names, folder labels with a path separator, and the input folder name are not. Every request body is identical except the data URL.
+- **DDD-25:** `--evaluate` takes no value. The US-01/US-02 AC texts are normative for the evaluation output formats.
+
+Added after peer review iteration 2:
+
+- **DDD-26 (valid Jev answer):** `jev/` checks every attempt before PASS can be considered.
+  - `choice` must be one of {`GOOD`, `MISPLACED`, `DAMAGED_CASE`, `CUT_LEAD`, `BENT_LEAD`}.
+  - `probabilities.GOOD` must be non-null, finite and within [0, 1].
+  - Anything else becomes `Transient("unreadable answer")`, is retried, and ends in REVIEW if it persists. So does an empty or unparsable body or a missing `answers.defect`.
+  - Required WireMock cases: null probabilities, P(GOOD) out of range (1.7), NaN or missing P(GOOD), unknown class (`SCRATCHED`), missing `answers.defect`, a non-JSON body (ADR-004).
+- **DDD-27 (Spring Boot 4.1):** upgrade from 3.5.16 to Spring Boot 4.1.x as **the first DELIVER step** (ADR-006, user decision 2026-10-30).
+  - DELIVER step 1 verifies and pins on Maven Central: the exact 4.1 patch, a compatible Cucumber JUnit Platform engine, WireMock standalone, and the ArchUnit 1.4.x patch.
+  - Changes that matter here:
+    - Spring Framework 7
+    - Jackson 3 (`tools.jackson`; `ReportWriter` migrates)
+    - the RestClient starter (`spring-boot-starter-restclient`) and per-module test starters
+    - renamed HTTP client properties (the Jev timeouts move to `detector.jev.*`)
+    - JUnit 6 / Platform
+- **DDD-28 (logging sink and bootstrap):** a new `LogSink` component in the root/composition package.
+  - Bounded change; its universe is `<output>/damage-detector.log` only.
+  - `main` pre-parses `--output` with `cli/CliArguments` and runs bootstrap steps 1–4 (args, real-path check, create the output via `OutputFolder`, write probe). Then `LogSink` sets the log file to the real output path as a SpringApplication default property, before `SpringApplication.run`.
+  - When the output does not exist yet, it is **created first** via `OutputFolder` in step 3; it is never buffered.
+  - `application.yml` carries no log path.
+- **DDD-29 (output universe and DISTILL assertions):**
+  - `--output` creation is a declared delta: only the missing directories from the nearest existing ancestor down.
+  - `.damage-detector-write-probe` is removed at bootstrap step 4 on every normal path. A JVM kill between create and delete may leave an empty probe file; that leftover is documented, harmless (it is not an image) and overwritten by the next run.
+  - DISTILL asserts after **a full run and after each refusal run** that the **input tree hash is unchanged** and that the **output tree equals the declared universe** for that run type (brief.md table).
+  - `Inspector` is classified as **pure read through the input port, with external effect = Jev calls** and zero filesystem delta.
+
+## Wave: DESIGN / [REF] Component decomposition
+
+| Component | Path (under `src/main/java/de/aboutlabs/damagedetector/`) | Change type |
+|---|---|---|
+| Domain: `JevOutcome` (sealed: judged/failed) | `domain/` | CREATE NEW |
+| Domain: `Label` (5 classes + folder names) | `domain/` | CREATE NEW |
+| Domain: `Evaluation` + `ThresholdSweep` (pure metrics) | `domain/` | CREATE NEW |
+| Domain: `PassPolicy` (judges `JevOutcome`) | `domain/PassPolicy.java` | EXTEND |
+| Domain: `Inspection` (holds outcome; failure description) | `domain/Inspection.java` | EXTEND |
+| Domain: `BatchReport` (jevErrors, judged) | `domain/BatchReport.java` | EXTEND |
+| Domain port: `Jev` (returns `JevOutcome`) | `domain/Jev.java` | EXTEND |
+| Domain: `JevJudgement`, `Verdict` | `domain/` | UNCHANGED |
+| Batch use case (orchestration only) | `batch/BatchInspection.java` | EXTEND |
+| Shared `Inspector` (extracted per-image path) | `inspection/` | EXTEND (extracted from BatchInspection) |
+| `ImageFolder`: single read port, root-scoped, returns relative paths and bytes only, no labels; typed refusals; probe | moved `batch/ImageFolder.java` → `inspection/` | EXTEND |
+| `OutputFolder`: single write port, root-scoped; creates the output; write probe | `inspection/` | CREATE NEW |
+| `LogSink` (sets `<output>/damage-detector.log` before Spring starts) | root package | CREATE NEW |
+| `CliArguments` (pre-parser shared by the bootstrap and `DetectorCommand`) | `cli/` | part of the `DetectorCommand` EXTEND |
+| Build: Spring Boot 4.1.x, Jackson 3, RestClient starter, ArchUnit, verified test libraries | `pom.xml` | EXTEND (DELIVER step 1) |
+| `Probe` contract | `probe/` | CREATE NEW |
+| `AttemptResult` (answered, transient, permanent) | `jev/` | CREATE NEW (counted with RetryingJev) |
+| `ReportWriter` (error count/flag, probe) | `batch/ReportWriter.java` | EXTEND |
+| Evaluate use case `LabelledEvaluation` | `evaluate/` | CREATE NEW |
+| `EvaluationWriter` | `evaluate/` | CREATE NEW |
+| `OpenRouterJev` (single attempt, failure classification, key check moved to probe) | `jev/OpenRouterJev.java` | EXTEND |
+| `RetryingJev` (implements `Jev`) | `jev/` | CREATE NEW |
+| `DefectQuestion` | `jev/DefectQuestion.java` | UNCHANGED |
+| CLI driving adapter `DetectorCommand` (was `BatchCommand`; both modes, probes, exit code) | `cli/` (moved from `batch/BatchCommand.java`) | EXTEND |
+| `ErrorFeedback` + typed run refusal | `cli/` | CREATE NEW |
+| Composition root (`RetryingJev(OpenRouterJev)`, sleeper, `Clock`) | `DetectorConfiguration.java` | EXTEND |
+| Properties (retry block) | `DetectorProperties.java` | EXTEND |
+| `main()` bootstrap (steps 1–5) and start-up catch → `ErrorFeedback` | `DamageDetectorApplication.java` | EXTEND |
+| Config defaults (threshold, retry, Jev timeouts, console log off; **no log path**) | `src/main/resources/application.yml` | EXTEND |
+| Architecture rules test (ArchUnit) | `src/test/java/.../architecture/` | CREATE NEW |
+
+## Wave: DESIGN / [REF] Driving ports
+
+| Port | Contract | Story |
+|---|---|---|
+| Batch CLI | `--input=<folder> --output=<folder>` → summary line (with `N Jev errors in REVIEW`), exit 0/1/3, report files | WS, US-03 |
+| Evaluate CLI | `--evaluate --input=<labelled> --output=<folder>` → evaluation summary line, `evaluation.md/json`, exit 0/1/2/3 | US-01, US-02 |
+| Threshold | `--detector.pass-threshold=<0..1>` (default 0.86; out of range → exit 1, one line) | US-02 |
+| Retry | `--detector.jev.retry.max-attempts` (3), `.initial-backoff` (1s), `.max-backoff` (10s) | US-03 |
+| Secret | env `OPENROUTER_API_KEY` | all |
+| Container | `docker run … -v <in>:/in:ro -v <out>:/out damage-detector:0.1.0 [same flags]` | US-04 (DEVOPS) |
+| Errors | one stderr line + exit code from `ErrorFeedback`; log at `<output>/damage-detector.log` | all (INV-5) |
+
+## Wave: DESIGN / [REF] Driven ports + adapters
+
+| Port | Adapter(s) | Contract shape | Probe |
+|---|---|---|---|
+| `Jev` (bytes + media type → `JevOutcome`) | `RetryingJev` → `OpenRouterJev` → OpenRouter `POST /api/alpha/decisions` | External effect only, zero filesystem delta. Sleeper injected. Answer validity per DDD-26 | API key non-blank, base URL parseable (no paid call) |
+| **Input read port (single)** | `ImageFolder`, root = `--input` | Pure read: relative path strings (sorted) and bytes per relative path; no labels. Used by `Inspector`, both use cases (listing) and `ReportWriter` (copy source) | Input exists; ≥ 1 image, or ≥ 1 labelled image as judged by `LabelledEvaluation` |
+| **Output write port (single)** | `OutputFolder`, root = `--output` | Bounded change, the only writer; rejects escapes from the root | Create the output, then write and delete `.damage-detector-write-probe` |
+| Report sink | `ReportWriter` (via `OutputFolder` + `ImageFolder`) | Bounded change: `report.md`, `report.json`, `scrap/**`, `review/**` | Covered by the output probe |
+| Evaluation sink | `EvaluationWriter` (via `OutputFolder`) | Bounded change: `evaluation.md`, `evaluation.json` | Covered by the output probe |
+| Log sink | `LogSink` (file appender target) | Bounded change: `<output>/damage-detector.log` only | Covered by the output probe (it runs first) |
+| Time | `Clock` (run date), sleeper (backoff) | Capability injection | n/a |
+
+External integration: OpenRouter Decisions API (alpha). **Contract tests recommended:** consumer-driven contracts, using Spring Cloud Contract or Pact JVM recorded from the WireMock stubs, plus the manual real-Jev smoke per slice.
+
+## Wave: DESIGN / [REF] Technology choices
+
+| Tech | Version | License | Status |
+|---|---|---|---|
+| Java (OpenJDK) | 21 | GPLv2+CE | existing |
+| Spring Boot (starter, Jackson, RestClient starter) | **4.1.x**, latest patch, verified and pinned in DELIVER step 1 (was 3.5.16) | Apache 2.0 | **upgrade** (ADR-006) |
+| Spring Framework | 7.x (Boot-managed) | Apache 2.0 | via the upgrade |
+| Jackson | 3.x (`tools.jackson`), Boot-managed | Apache 2.0 | upgrade; `ReportWriter` migrates from `ObjectMapper` |
+| Cucumber + JUnit Platform | 7.x compatible with Boot 4.1's JUnit, verified in DELIVER step 1 (7.20.1 today) | MIT | existing (test) |
+| WireMock standalone | 3.13.x or newer, verified in DELIVER step 1 (3.13.2 today) | Apache 2.0 | existing (test); faults for 503, timeout, malformed and invalid answers |
+| ArchUnit `archunit-junit5` | 1.4.x, exact patch verified in DELIVER step 1 | Apache 2.0 | **new (test)** |
+| Spring Retry / Resilience4j / Framework 7 core retry | n/a | n/a | not used (ADR-004) |
+
+## Wave: DESIGN / [REF] Decisions table
+
+| # | Decision | Alternatives rejected | ADR |
+|---|---|---|---|
+| DDD-1 | Modular monolith, evaluate in same jar | Separate eval tool; Spring Batch; microservices | ADR-001 |
+| — | Jev via OpenRouter Decisions API, image in `state` (records the SPIKE decision) | Vision LLM + Jev on text; SDK sidecar; raw HttpClient | ADR-002 |
+| DDD-2/4 | Sealed `JevOutcome`; pure metrics and sweep | Exceptions caught per use case; nullable judgement; retry flag in domain | ADR-003 |
+| DDD-5/6/7/26 | Plain retry decorator, transient-only, valid-answer check | Framework 7 core retry; Spring Retry; RestClient interceptor; Resilience4j; retry all 4xx | ADR-004 |
+| DDD-8–12/22/28 | Central error feedback, bootstrap probes, exit codes 0–3, log file in the output via `LogSink` | FailureAnalyzer/ExitCodeExceptionMapper; per-component printing; key check in constructor; ambient log path; EnvironmentPostProcessor; temp-dir fallback | ADR-005 |
+| DDD-27 | Spring Boot 4.1 | Stay on 3.5 unpatched; commercial extended support; 4.0 (OSS ends 2026-12-31) | ADR-006 |
+
+## Wave: DESIGN / [REF] Reuse Analysis
+
+HARD GATE. "Contract shape" follows the effect-isolation classification. The assertion is how the crafter or acceptance tests prove the contract.
+
+| Existing component | Overlap with new work | Decision | Evidence / justification | Contract shape · universe · assertion |
+|---|---|---|---|---|
+| `batch/BatchCommand` | CLI parsing, summary line | EXTEND (moved to `cli/` and renamed `DetectorCommand`) | Already the `ApplicationRunner` driving adapter and the `--input/--output` parser; evaluate is one more flag | Bounded change · universe = stdout, stderr, exit code · acceptance tests assert the stderr line, exit code and Jev call count |
+| `batch/BatchInspection` | Per-image judging needed by evaluate | EXTEND (per-image path extracted into `inspection/Inspector`) | `inspect()` already sends only bytes (C11). Today it calls `Files.readAllBytes` directly; after the extraction, reads go through `ImageFolder`, the single read port | `BatchInspection`: orchestration, zero direct IO. `Inspector`: **pure read via the input port; external effect = Jev calls**; zero filesystem delta · WireMock C11 assertion; input tree hash unchanged (DDD-29) |
+| `batch/ImageFolder` | Image listing for both modes; single read port | EXTEND (moved to `inspection/`, root-scoped) | The recursive, stable-order PNG/JPEG walk and the missing-folder check exist. **It has no "no images" check today** (an empty folder returns an empty list); that refusal is new. It returns relative path strings only; label resolution moves to `evaluate/` | Pure read · universe = files below `--input`, zero delta · input tree hash unchanged after every run, including refusals; ArchUnit rules 2 and 7 |
+| `batch/ReportWriter` | Jev error count/flag; copy source | EXTEND | Owns report.md/json and the copy layout; errors are additive fields. It writes via `OutputFolder` and **reads the source images via `ImageFolder`** (today: `Files.copy(input.resolve(...))` on raw `Path`s). Migrates to Jackson 3 (ADR-006) | Bounded change · `report.*`, `scrap/**`, `review/**` · output tree = declared universe; ArchUnit rules 6 and 7 |
+| `jev/OpenRouterJev` | Failure classification, single attempt | EXTEND (no longer implements `Jev`; returns `jev/AttemptResult`) | Request/response mapping is proven (SPIKE); only the error handling and the key-check placement change | External effect only · 1 HTTP call per invocation, zero filesystem delta · WireMock request count |
+| Acceptance harness `WalkingSkeletonAcceptanceTest`, `WalkingSkeletonSteps`, `walking-skeleton.feature` | Every new story's acceptance tests (WS strategy B) | EXTEND (DISTILL owns) | It already starts the real app with CLI args, uses the real filesystem and WireMock for Jev, and asserts the request shape | Test · it must also capture stderr and the exit code (today it only uses `SpringApplication.run`) |
+| Test fixtures `src/test/resources/transistor-images/` | Labelled-folder fixtures | EXTEND (DISTILL owns) | 2 real PNGs exist; labelled layouts are built from them in temp dirs | Test data |
+| `jev/DefectQuestion` | none | UNCHANGED | Changing the texts changes the classifier | Constant data |
+| `domain/PassPolicy` | Failure → REVIEW; sweep re-application | EXTEND | The single verdict rule (D20) must be reused by the sweep and the headline | Pure function · unit/property test: `Failed` is never PASS for any t |
+| `domain/Inspection` | Failure description | EXTEND | Already owns the description per verdict | Pure value |
+| `domain/BatchReport` | `jevErrors`, `judged` | EXTEND | Already owns the summary figures | Pure value · INV-4 asserted |
+| `domain/Jev` port | Outcome instead of exception | EXTEND (signature) | Port stays bytes + media type only (C11) | Interface contract |
+| `domain/JevJudgement`, `Verdict` | none | UNCHANGED | n/a | Pure values |
+| `DetectorProperties` | Retry keys | EXTEND | Existing `@ConfigurationProperties("detector")` record with a redacted `toString` | Pure value |
+| `DetectorConfiguration` | Wiring decorator, sleeper, clock | EXTEND | Existing composition root | Pure wiring (no IO at construction; the probes run later) |
+| `DamageDetectorApplication` | Bootstrap steps 1–5 (DDD-28) and start-up error catch | EXTEND | Existing `main` with `SpringApplication.exit` | Bounded change · universe = stderr line + process exit code; output creation and the probe happen via `OutputFolder`; the log path via `LogSink` |
+| `application.yml` | Threshold, retry and Jev-timeout defaults; console log off | EXTEND | Existing config (it already has the threshold, the Jev block and the key placeholder) | Pure configuration data · contract: defaults only, **no log file path**, the key only as `${OPENROUTER_API_KEY:}`, no secret value · test: the walking skeleton runs with only these defaults plus CLI args |
+| `pom.xml` | Boot 4.1 upgrade, ArchUnit | EXTEND (DELIVER step 1) | Existing build; the parent and test-library versions are verified on Maven Central (ADR-006) | Build config · `./mvnw verify` green, including the walking skeleton |
+| — | Failure-as-value | CREATE NEW `JevOutcome` | No existing type can express a failed judgement; `JevJudgement` must stay a successful answer | Pure sealed type |
+| — | Retry | CREATE NEW `RetryingJev` + `jev/AttemptResult` | No retry exists; a decorator keeps `OpenRouterJev` single-purpose. `AttemptResult` (answered, transient, permanent) carries the classification without polluting the domain | External effect only (via `OpenRouterJev`), zero filesystem delta · unit test with a stub attempt source and an instant sleeper; WireMock scenario asserts the attempt count |
+| — | Single write port | CREATE NEW `OutputFolder` (root = `--output`) | Today `ReportWriter` writes via raw `Path`s and `Files` directly, so the bounded-change contracts were conventions only. The read side reuses `ImageFolder` (no separate `InputImages`) | Bounded change, the only writer, rejects escapes from the root · universe = the declared table in brief.md · ArchUnit rule 6 |
+| — | Logging sink | CREATE NEW `LogSink` (root package) | No log file exists today (console logging only). The log path must be set before Spring starts and after the output has passed its probe, so no existing component can own it | Bounded change · universe = `<output>/damage-detector.log` only; no temp-dir fallback · test: after a refused-at-step-6 run the output holds only the created dirs plus `damage-detector.log` |
+| — | No-images / output-inside-input refusals, probe contract | CREATE NEW `probe/Probe` (+ the refusals inside the input/output probes) | No probe or empty-folder check exists | Probes: pure checks, except the output probe (bounded: `.damage-detector-write-probe`, deleted) |
+| — | Ground-truth label | CREATE NEW `Label` | No label concept exists; it must be kept out of `jev..` | Pure value |
+| — | Metrics and sweep | CREATE NEW `Evaluation`/`ThresholdSweep` | `BatchReport` describes one threshold without labels; the metrics need labels and many t | Pure function · unit tests with the US-01/02 examples |
+| — | Evaluate use case | CREATE NEW `LabelledEvaluation` | A different output, exit rule and label handling from batch; it reuses `Inspector` | Orchestration with zero direct IO; label resolution is pure · effects only via `Inspector` and `EvaluationWriter` |
+| — | Evaluation output | CREATE NEW `EvaluationWriter` | `ReportWriter` writes copies and the report.* contract; mixing in evaluation.* would merge two output contracts (slice-01 OUT: no copies) | Bounded change · `evaluation.*` only |
+| — | Error-to-message mapping | CREATE NEW `ErrorFeedback` + typed refusal | Messages are scattered in exceptions today, and stack traces reach the console; INV-5 needs one place | Pure mapping (refusal → line + code) |
+| — | Architecture enforcement | CREATE NEW ArchUnit test | No enforcement exists | Test only |
+
+Count (after review iteration 2): **16 EXTEND (14 production incl. `pom.xml`, 2 test), 3 UNCHANGED, 11 CREATE NEW** (`JevOutcome`, `RetryingJev`+`AttemptResult`, `OutputFolder`, `LogSink`, `probe/Probe`, `Label`, `Evaluation`/`ThresholdSweep`, `LabelledEvaluation`, `EvaluationWriter`, `ErrorFeedback`, the ArchUnit test). Each CREATE NEW is justified above as having no existing alternative. Declared `--output` write universe: see brief.md, "Declared write universe".
+
+## Wave: DESIGN / [REF] Open questions
+
+1. **OQ-1:** resolved by DDD-23 (30 s read timeout); UC-4 confirmed by the user 2026-10-30.
+2. **OQ-2:** resolved: UC-1, UC-2 and UC-3 confirmed by the user 2026-10-30. DISTILL uses the UC wording in `design/upstream-changes.md` as the test oracle where it differs from DISCUSS.
+3. **OQ-3:** resolved: log file `<output>/damage-detector.log` (user, 2026-10-30). Crafter to verify that logback emits no console status line when the file cannot be opened.
+4. **OQ-4:** resolved by DDD-22 (refuse output the same as or inside input, compared on real paths).
+6. **OQ-6:** the exact Spring Boot 4.1 patch and compatible Cucumber, WireMock and ArchUnit versions. Verified on Maven Central in DELIVER step 1 (ADR-006).
+5. **OQ-5:** Contract-test tool for the alpha API: Spring Cloud Contract or Pact JVM. This is a DEVOPS/DISTILL choice.
+
+## Wave: DESIGN / [REF] Changed Assumptions
+
+1. **Which Jev errors are retried.** US-03 AC: "A failed Jev call (timeout, connection error, HTTP error, unreadable answer) is retried…". **New:** only transient errors are retried (timeouts, connection errors, HTTP 408/429/5xx, unreadable answer). Other 4xx errors fail after 1 attempt. Rationale: retrying a 401 cannot succeed and costs ≥ 3 s per image (K5). The US-03 technical note leaves this to DESIGN. Scenario outcomes are unchanged (UC-1).
+2. **"Non-zero exit" is refined.** D14, D18 and INV-5 say "non-zero". **New:** 1 refused/unexpected, 2 false pass, 3 none judged (UC-2).
+3. **Missing-key check timing.** In the skeleton it happens in the `OpenRouterJev` constructor (wiring, which brings a stack trace). **New:** it is a startup probe in the CLI, so the INV-5 one-line message holds.
+4. **C11 test wording.** The US-01 scenario says: "no request … contains … a folder name such as "damaged_case" or "good"". **New:** the fixed class vocabulary is allowed; per-image names, paths and labels are not (UC-3).
+5. **Jev read timeout.** The skeleton and the US-03 example use 120 s. **New:** 30 s, to keep K5 (UC-4).
+6. **Framework version.** The SPIKE skeleton and DISCUSS assume Spring Boot 3.5.16. **New:** Spring Boot 4.1.x, as the first DELIVER step (ADR-006, user decision 2026-10-30). There is no story or AC change.
+
+## Wave: DESIGN / [REF] Wave decisions summary
+
+- **Peer review:**
+  - Iteration 1: rejected (3 critical, 5 high), fixed by DDD-19 to DDD-25.
+  - Iteration 2: rejected (1 critical, 5 high, plus lower findings), fixed in one targeted pass by DDD-26 to DDD-29, ADR-006 and the brief rewrite. See the resolutions list below.
+  - There is no third review; the orchestrator verifies.
+- **Key decisions:** DDD-1 to DDD-29, Option A (confirmed by the user 2026-10-30). ADR-001 to ADR-006 are in `docs/product/architecture/`.
+- **Architecture summary:**
+  - One Spring Boot 4.1 CLI jar, structured as a modular monolith with ports and adapters.
+  - Two use cases (batch and evaluate) share one inspection path.
+  - Single read port `ImageFolder` and single write port `OutputFolder`.
+  - The `Jev` port returns a sealed outcome; retry is a decorator with an answer-validity check.
+  - Metrics and the sweep are pure domain functions.
+  - All errors go through one CLI error mapper. A pre-Spring bootstrap checks the paths, creates the output and sets the log file before any paid call.
+  - C4 L1, L2 and L3 are in `docs/product/architecture/brief.md`.
+- **Tech stack:** Java 21, Spring Boot 4.1.x (Spring Framework 7, Jackson 3), Cucumber 7.x, WireMock 3.13.x or newer, ArchUnit 1.4.x (test). The exact versions are verified in DELIVER step 1. No new runtime library beyond the Boot 4 starters.
+- **Constraints:** C1, C2, C3, C7, C10, C11, C12; INV-1 to INV-5; no DB, web or Qwen; sequential Jev calls; the key comes only from the env.
+- **Upstream changes:** UC-1 to UC-4 in `design/upstream-changes.md`, all confirmed by the user 2026-10-30. See also Changed Assumptions.
+- **DELIVER order:** step 1 is the Spring Boot 4.1 upgrade with the walking skeleton staying green. Then slices 01 → 02 → 03 → 04 (D22).
+- **Handoff:**
+  - **DISTILL (acceptance-designer) gets:**
+    - the INV-5 rows plus exit codes
+    - WireMock fault scenarios: 503 ×3, 503 then OK, 401, timeout, malformed body, the invalid answers of DDD-26, and 429 with `Retry-After` above the cap
+    - labelled-folder fixtures
+    - the C11 request assertion
+    - the input-hash and output-universe assertions after full and refusal runs (DDD-29)
+    - the output-same-as/inside-input refusal
+  - **DEVOPS (platform-architect) gets:**
+    - the US-04 contract: env key, `/in:ro`, `/out` writable by the host user, log at `/out/damage-detector.log`
+    - a Java 21 base image for Boot 4.1
+    - the contract-test annotation for the OpenRouter Decisions API
+    - the 8 ArchUnit rules in `./mvnw verify`
+
+### Review iteration 2 resolutions
+
+| Finding | Fixed in |
+|---|---|
+| N1 (critical) logging sink | brief.md: component table (`LogSink`), "Bootstrap sequence and logging" (step 5, no temp fallback), "Declared write universe"; ADR-005 decisions 2.5 and 6 (`application.yml` contract) and alternatives 4–6; feature-delta DDD-11, DDD-28, Reuse rows `LogSink` (CREATE NEW) and `application.yml` (contract defined) |
+| N2 labels only in `evaluate/` + ArchUnit | brief.md: component table (`ImageFolder` returns relative paths, `LabelledEvaluation` is the only label resolver), Driven ports, Enforcement rule 2; feature-delta DDD-3, DDD-20, Component decomposition (`ImageFolder` row), Reuse row `ImageFolder` |
+| N3 `ReportWriter` via capabilities; one read port | brief.md: Driven ports ("Input read port (single)" = `ImageFolder`), C4 L3 (writers → folder); feature-delta DDD-20 (`InputImages` merged), Driven ports table, Reuse rows `ReportWriter` and `OutputFolder` |
+| N4 rules 1/6/7, rule count | brief.md: Enforcement rules 1–8; feature-delta DDD-17 (same 8 rules) |
+| N5 valid Jev answer | ADR-004 Decision ("A valid answer…") with the WireMock cases; brief.md "Integration patterns"; feature-delta DDD-26 |
+| N6 real-path same-or-inside refusal | brief.md "Bootstrap sequence" step 2 and Earned Trust table; ADR-005 decision 2.2; feature-delta DDD-22 |
+| N7 log bootstrap and a not-yet-existing output | brief.md "Bootstrap sequence" steps 1–5; ADR-005 decision 2 and alternatives 4–5; feature-delta DDD-28 (the output is created first via `OutputFolder`, never buffered) |
+| N8 `Inspector` label + DISTILL assertions | brief.md component table and "Declared write universe" (DISTILL assertions); feature-delta DDD-29, Reuse row `BatchInspection` |
+| N9 dependency edges incl. `probe` | brief.md "Allowed dependency edges" table; feature-delta DDD-21 |
+| N10 cost of failed attempts | ADR-004 Decision ("Cost") and Consequences; brief.md "Integration patterns"; feature-delta DDD-15 |
+| N11 Spring Boot 4.1 | ADR-006 (new); brief.md Technology stack, C4 L2; ADR-004 alternative 1; feature-delta DDD-27, Technology choices, Decisions table, Changed Assumption 6, OQ-6 |
+| N12 break-even of 3 hanging images | ADR-004 Consequences; brief.md quality-attribute driver 6; feature-delta DDD-23 |
+| N13 harness wording | ADR-003 Consequences |
+| N14 ArchUnit version verified in DELIVER step 1 | brief.md Technology stack; ADR-006 Decision; feature-delta DDD-17, Technology choices, OQ-6 |
+| N15 `Retry-After` above the cap | ADR-004 Decision ("Backoff"); brief.md "Integration patterns"; feature-delta DDD-6 |
+| N16 output dir creation, probe-file leftover | brief.md "Bootstrap sequence" steps 3–4 and "Declared write universe"; ADR-005 decisions 2.3–2.4; feature-delta DDD-29 |
+| N19 UC confirmation | already resolved: `design/upstream-changes.md` (status confirmed 2026-10-30), OQ-2 |
