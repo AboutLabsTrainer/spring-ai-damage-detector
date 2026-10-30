@@ -1,0 +1,13 @@
+id: P3
+slug: showcase-presenter
+name: Jonas Berger (illustrative)
+role: Developer who presents the damage detector as a Spring AI / Jev showcase
+status: illustrative; stands for the project stakeholder's own use (E6 "It's a showcase project")
+context: >
+  Prepares and runs the demo on his laptop or a borrowed machine, with an OpenRouter key in a local
+  .env. Must state accuracy honestly (zero false passes, REVIEW share) and attribute MVTec AD
+  (CC BY-NC-SA 4.0, non-commercial).
+goals: [evidence that no defect passes, a defensible pass threshold, a one-command start anywhere]
+vocabulary: [evaluate, false pass, good auto-pass rate, recall, threshold sweep, REVIEW share]
+jobs: [J2, J3]
+created: 2026-10-30

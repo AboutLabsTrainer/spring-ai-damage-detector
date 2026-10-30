@@ -1,0 +1,13 @@
+id: P1
+slug: qs-inspector
+name: Petra Lindner (illustrative)
+role: QS inspector, transistor production line
+status: illustrative showcase persona, UNVALIDATED (DISCOVER E6; 0 interviews)
+context: >
+  Receives top-view 1024x1024 images of TO-92 transistors on a stripboard (stakeholder statement E2;
+  sample data is MVTec AD, so a live camera feed is unverified). Runs the batch after a shift and
+  hands scrap records to reporting and to the line (DISCOVER P2).
+goals: [no defective part passes, a complete scrap record per defect, a report even when the AI service glitches]
+vocabulary: [PASS, SCRAP, REVIEW, scrap record, suspected defect, bent lead, cut lead, damaged case, misplaced]
+jobs: [J1]
+created: 2026-10-30

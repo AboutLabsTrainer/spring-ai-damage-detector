@@ -1,0 +1,83 @@
+# Jobs-to-be-Done SSOT: spring-ai-damage-detector
+# Created 2026-10-30 in DISCUSS for feature transistor-damage-detection.
+#
+# EVIDENCE HONESTY: showcase/demo project (DISCOVER E6). 0 customer interviews.
+# The jobs come from ONE stakeholder (brief E1, answers E6/E7, decisions 2026-10-30)
+# plus SPIKE measurements. Personas are illustrative. No importance/satisfaction survey
+# exists, so no ODI opportunity score is computed. `stakeholder_priority` is an ordinal
+# rank taken from the stakeholder's decisions, NOT an opportunity score.
+# Reopen with real QS interviews if the project is ever productized.
+
+schema_version: 1
+evidence_basis: stakeholder input + SPIKE measurements (no customer interviews)
+
+jobs:
+  - id: J1
+    name: decide-and-document-scrap
+    origin: DISCOVER seed (docs/product/journeys/qs-scrap-documentation.yaml, J1)
+    persona: qs-inspector            # docs/product/personas/qs-inspector.yaml (illustrative)
+    job_story: >
+      When a batch of top-view images of placed transistors is ready,
+      I want every image to end up as PASS, SCRAP or REVIEW with a short reason,
+      so I can release the good parts and hand over a complete scrap record
+      without opening every image myself.
+    dimensions:
+      functional: Sort a folder of transistor images into pass / scrap / human review and leave an image + text record for every non-passed part.
+      emotional: Trust that nothing defective slipped through, and no worry that one glitch silently lost part of the batch.
+      social: Be seen by quality reporting and the line as the person whose scrap records are complete and correct.
+    four_forces:
+      push: Looking at each image by hand is slow; an unattended batch that aborts on one error leaves no report at all (skeleton gap, SPIKE wave-decisions "one failed Jev call aborts the batch").
+      pull: One command produces report.md, report.json and scrap/ + review/ folders with a description per image.
+      anxiety: The AI passes a defective part (C10, zero false passes); a Jev outage turns a nightly run into nothing.
+      habit: Manual visual inspection; anything unclear is looked at by a person anyway (REVIEW keeps that habit).
+    stakeholder_priority: 2
+    opportunity_score: not scored (no importance/satisfaction data)
+    status: unvalidated (single stakeholder, showcase)
+
+  - id: J2
+    name: prove-the-pass-rule-is-safe
+    origin: DISCUSS 2026-10-30 (stakeholder decision "user-facing evaluate command")
+    persona: showcase-presenter      # docs/product/personas/showcase-presenter.yaml (illustrative)
+    job_story: >
+      When I show the damage detector to an audience or before I trust a new pass threshold,
+      I want to measure it against the labelled MVTec AD images and see false passes,
+      good auto-pass rate and per-class recall for several thresholds,
+      so I can pick a threshold that lets no defect pass and state its accuracy honestly.
+    dimensions:
+      functional: Score the pipeline on the 253 labelled images and choose the pass threshold from evidence.
+      emotional: Confidence that the 0.86 threshold is not just luck from a 66-image sample (SPIKE margin was 0.01).
+      social: Be seen as presenting honest numbers, including the review share, not a cherry-picked demo.
+    four_forces:
+      push: 0.86 was fitted in-sample on 26 good + 40 defect images; the highest defect P(GOOD) was 0.85 (SPIKE findings).
+      pull: One run over all 253 images (~$0.04) shows the numbers and a threshold sweep.
+      anxiety: A re-run may show a false pass at 0.86 (Jev run-to-run variance); folder names leaking to the model would fake the accuracy (C11).
+      habit: Ad-hoc Python probe scripts (the SPIKE probe, now deleted).
+    stakeholder_priority: 1
+    opportunity_score: not scored (no importance/satisfaction data)
+    status: unvalidated (single stakeholder, showcase)
+
+  - id: J3
+    name: run-the-demo-anywhere
+    origin: DISCUSS 2026-10-30 (brief C2 "The project should run in Docker")
+    persona: showcase-presenter
+    job_story: >
+      When I present the detector on a machine I did not set up,
+      I want to start it with one docker run command and my own API key,
+      so I can show the same report as on my laptop without installing Java or leaking the key.
+    dimensions:
+      functional: Run batch inspection and evaluation from a container with mounted input/output folders.
+      emotional: Calm before a demo; no "works on my machine" moment.
+      social: Be seen as delivering a runnable, professionally packaged showcase.
+    four_forces:
+      push: Today the demo needs a JDK, Maven and a sourced .env (SPIKE demo command).
+      pull: docker run with -v and -e only.
+      anxiety: The OpenRouter key ends up baked into a shared image; output files on the host are owned by root.
+      habit: java -jar on the developer laptop.
+    stakeholder_priority: 3
+    opportunity_score: not scored (no importance/satisfaction data)
+    status: unvalidated (single stakeholder, showcase)
+
+changelog:
+  - date: 2026-10-30
+    feature: transistor-damage-detection
+    change: Created. J1 lifted from the DISCOVER journey seed; J2, J3 added from stakeholder decisions of 2026-10-30.
