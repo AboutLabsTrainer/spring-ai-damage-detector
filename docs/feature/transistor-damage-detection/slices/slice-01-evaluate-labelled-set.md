@@ -10,7 +10,9 @@
 - Console summary line, `evaluation.md`, `evaluation.json` (per image: path, label, verdict, Jev choice, P(GOOD); run level: `jevCost`, `elapsedSeconds`, also shown in `evaluation.md`).
 - False-pass list, per-class table (images, not passed = recall, suspected class correct, passed), good auto-pass x/213.
 - Unlabelled images are skipped, counted and not sent to Jev. A missing labelled structure gives a clear error before any Jev call.
-- Non-zero exit when false passes > 0 at the configured threshold (D18, PO-proposed).
+- Exit 2 and one stderr line when false passes > 0 at the configured threshold (D18, user-confirmed; Q7).
+- `evaluation.md` states the run date, and states that the defect images were in the SPIKE sample, so the defect side shows reproducibility and is not held-out validation (D26, Q8).
+- A rerun into the same output folder replaces `evaluation.md` and `evaluation.json` as a whole.
 - MVTec AD attribution line in `evaluation.md`.
 
 ## OUT
@@ -23,9 +25,9 @@
 
 ## Acceptance criteria
 1. A labelled folder with good/000.png (P(GOOD) 0.91), good/001.png (0.85), bent_lead/000.png (CUT_LEAD) and misplaced/000.png (GOOD 0.45) at t = 0.86 → `0 false passes`, good auto-pass 1/2, recall 1/1 for bent_lead and misplaced, and the bent_lead suspected class is counted as not correct.
-2. A defect judged GOOD with P(GOOD) 0.87 at t = 0.86 → listed as a false pass with 0.87, non-zero exit.
-3. No Jev request contains a file name, folder name or label (C11).
-4. A folder without the labelled sub-folders → the message names the 5 expected sub-folders, non-zero exit, 0 Jev calls.
+2. A defect judged GOOD with P(GOOD) 0.87 at t = 0.86 → listed as a false pass with 0.87, one stderr line, exit 2.
+3. No request to Jev contains an image's file name, its relative path, a folder label followed by a path separator (e.g. `damaged_case/`), or the input folder name. Apart from the image data, every request is identical for every image (C11, UC-3).
+4. A folder without the labelled sub-folders → the message names the 5 expected sub-folders, exit 1, 0 Jev calls.
 5. **Production data:** the real run over all 253 images in `images/` completes. Paste its summary line and the per-class table here (Evidence section) together with the run date and the cost (expected ≈ $0.04, ≈ 5 min).
 
 ## Dependencies
@@ -40,3 +42,4 @@ None needed. The request shape and cost are known from the SPIKE.
 
 ## Evidence (fill after the run)
 - Run date / summary line / per-class table: _pending_
+- Note when citing these numbers: all 40 defect images were in the SPIKE sample, so a 0 false-pass result shows reproducibility, not held-out validation. Only the 187 good images the SPIKE never used are new evidence (D26, Q8).

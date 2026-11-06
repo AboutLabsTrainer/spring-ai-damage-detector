@@ -11,7 +11,7 @@ Accepted with Option A (user, 2026-10-30). It extends the SPIKE pass rule (D20).
 - In the skeleton, `PassPolicy.judge(JevJudgement)` cannot express a failure. A failure aborts the batch through an exception.
 
 ## Decision
-- Introduce a domain **sealed outcome**: `JevOutcome` is either `Judged(JevJudgement)` or `Failed(attempts, reason)`.
+- Introduce a domain **sealed outcome**: `JevOutcome` is either `Judged(JevJudgement, attempts)` or `Failed(attempts, reason)`. The attempt count on `Judged` only feeds the cost note (a success after a failed attempt makes the cost a lower bound); it never affects the verdict.
 - The `Jev` port returns a `JevOutcome`. `PassPolicy` judges a `JevOutcome` with an exhaustive switch: `Failed` → REVIEW, `Judged` → the D20 rule. `Inspection` stores the outcome.
 - With this design, the bug "a failed image passes" cannot be represented: no code path builds a PASS from `Failed`, and the compiler rejects a non-exhaustive switch.
 - The sweep and all evaluation metrics are **pure functions** over the recorded `JevOutcome` per image. They re-apply `PassPolicy` at each t. The configured-t row and the headline use the same policy, so they agree by construction. Thresholds are handled as hundredths (0.50…0.99), and the configured t is always included even if it is off-grid.

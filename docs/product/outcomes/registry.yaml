@@ -1,2 +1,238 @@
-schema_version: "0.1"
-outcomes: []
+schema_version: '0.1'
+outcomes:
+- id: OUT-1
+  kind: operation
+  summary: Score the pass rule against labelled images
+  feature: transistor-damage-detection
+  inputs:
+  - shape: --evaluate --input=<labelled folder> --output=<folder>
+  output:
+    shape: evaluation summary line, evaluation.md, evaluation.json, exit 0|1|2|3
+  keywords:
+  - evaluate
+  - false-pass
+  - recall
+  - labelled
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature
+  related: []
+  superseded_by: null
+- id: OUT-2
+  kind: operation
+  summary: Recompute verdicts for every threshold from one Jev pass (D17)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: list of labelled Jev outcomes + configured threshold
+  output:
+    shape: sweep rows for t=0.50..0.99 plus configured t; lowest safe threshold or
+      none
+  keywords:
+  - threshold
+  - sweep
+  - safe-threshold
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-2-threshold-sweep.feature
+  related: []
+  superseded_by: null
+- id: OUT-4
+  kind: specification
+  summary: Retry only transient failures, with capped backoff and Retry-After (UC-1,
+    ADR-004)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: image bytes + media type at the Jev port; replies of the alpha API
+  output:
+    shape: 'JevOutcome: Judged(JevJudgement) or Failed(attempts, reason)'
+  keywords:
+  - retry
+  - backoff
+  - retry-after
+  - transient
+  - permanent
+  artifact: src/test/java/de/aboutlabs/damagedetector/jev/RetryingJevTest.java
+  related: []
+  superseded_by: null
+- id: OUT-5
+  kind: specification
+  summary: An answer is valid only with a known class and a finite P(GOOD) in [0,1]
+    (DDD-26)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: 'Jev reply: choice, probabilities, confidence, usage.cost'
+  output:
+    shape: valid judgement, or transient 'unreadable answer'
+  keywords:
+  - valid-answer
+  - unreadable
+  - probability
+  - alpha-api
+  artifact: src/test/java/de/aboutlabs/damagedetector/jev/OpenRouterJevAdapterTest.java
+  related: []
+  superseded_by: null
+- id: OUT-6
+  kind: specification
+  summary: One mapping from every failure to one line and an exit code (INV-5, ADR-005)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: refusal reason with details, or any exception
+  output:
+    shape: 'one stderr line + exit code 1; completed run: 0, 2, 3 with precedence
+      1 > 3 > 2'
+  keywords:
+  - error-feedback
+  - exit-code
+  - refusal
+  - usage
+  artifact: src/test/java/de/aboutlabs/damagedetector/cli/ErrorFeedbackTest.java
+  related: []
+  superseded_by: null
+- id: OUT-3
+  kind: operation
+  summary: Finish a batch whatever Jev does
+  feature: transistor-damage-detection
+  inputs:
+  - shape: --input=<folder> --output=<folder>, Jev failing for some or all images
+  output:
+    shape: complete report with jevErrors and judged, REVIEW per failed image, exit
+      0|1|3
+  keywords:
+  - batch
+  - resilience
+  - jev-error
+  - review
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature
+  related: []
+  superseded_by: null
+- id: OUT-7
+  kind: invariant
+  summary: No unsafe PASS, counts add up
+  feature: transistor-damage-detection
+  inputs:
+  - shape: any Jev outcome, any threshold
+  output:
+    shape: PASS only for choice GOOD with P(GOOD) >= t; a failed image is never PASS;
+      PASS+SCRAP+REVIEW=total; errors <= REVIEW
+  keywords:
+  - inv-1
+  - inv-4
+  - c10
+  - never-pass
+  - counts
+  artifact: src/test/java/de/aboutlabs/damagedetector/domain/EvaluationTest.java
+  related: []
+  superseded_by: null
+- id: OUT-8
+  kind: invariant
+  summary: Ground truth never reaches Jev (UC-3)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: any labelled or unlabelled input tree
+  output:
+    shape: no Jev request carries a file name, relative path, label with separator
+      or input folder name; bodies identical apart from image data
+  keywords:
+  - inv-2
+  - c11
+  - ground-truth
+  - g1
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature
+  related: []
+  superseded_by: null
+- id: OUT-9
+  kind: invariant
+  summary: The key never appears in what the detector leaves behind
+  feature: transistor-damage-detection
+  inputs:
+  - shape: any run, any Jev behaviour, with or without --debug
+  output:
+    shape: API key absent from console, log, reports, image
+  keywords:
+  - inv-3
+  - api-key
+  - canary
+  - secret
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature
+  related: []
+  superseded_by: null
+- id: OUT-10
+  kind: invariant
+  summary: A run changes only its declared output
+  feature: transistor-damage-detection
+  inputs:
+  - shape: any run, completed or refused
+  output:
+    shape: input tree hash unchanged; output tree equals the declared universe of
+      the run type
+  keywords:
+  - ddd-29
+  - write-universe
+  - input-unchanged
+  artifact: src/test/java/de/aboutlabs/damagedetector/acceptance/support/DetectorRun.java
+  related: []
+  superseded_by: null
+- id: OUT-11
+  kind: operation
+  summary: Same result from the container, without the key in the image
+  feature: transistor-damage-detection
+  inputs:
+  - shape: docker run with /in read-only, /out writable, key from the run-time environment,
+      same flags
+  output:
+    shape: same verdict counts and output files as the jar; exit codes unchanged;
+      no key in the image
+  keywords:
+  - docker
+  - container
+  - parity
+  - k4
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-4-docker-run.feature
+  related: []
+  superseded_by: null
+- id: OUT-12
+  kind: invariant
+  summary: An interrupted run leaves no half-written report (D25)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: any run stopped by SIGINT, SIGTERM or SIGKILL
+  output:
+    shape: exit 130, 143 or 137; no partial report under its final name; at most one
+      tmp file
+  keywords:
+  - inv-6
+  - interrupt
+  - atomic-write
+  - no-partial-report
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature
+  related: []
+  superseded_by: null
+- id: OUT-13
+  kind: specification
+  summary: An unusable threshold is a refusal, not a binding failure (DDD-32)
+  feature: transistor-damage-detection
+  inputs:
+  - shape: raw text of detector.pass-threshold
+  output:
+    shape: PassPolicy for a number from 0 to 1, otherwise a THRESHOLD_INVALID refusal
+      echoing the value
+  keywords:
+  - pass-threshold
+  - refusal
+  - binding
+  artifact: src/test/java/de/aboutlabs/damagedetector/cli/PassThresholdTest.java
+  related: []
+  superseded_by: null
+- id: OUT-14
+  kind: operation
+  summary: A run that cannot work is refused at once with a clear reason
+  feature: transistor-damage-detection
+  inputs:
+  - shape: any command line or setting that cannot work
+  output:
+    shape: one pinned stderr line, exit 1, 0 Jev calls, input unchanged, output as
+      declared
+  keywords:
+  - us-05
+  - refusal
+  - k6
+  - inv-5
+  artifact: src/test/resources/features/transistor-damage-detection/acceptance/milestone-5-refusal-feedback.feature
+  related: []
+  superseded_by: null

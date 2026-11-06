@@ -25,8 +25,11 @@ jobs:
       functional: Sort a folder of transistor images into pass / scrap / human review and leave an image + text record for every non-passed part.
       emotional: Trust that nothing defective slipped through, and no worry that one glitch silently lost part of the batch.
       social: Be seen by quality reporting and the line as the person whose scrap records are complete and correct.
+    scope_note: >
+      The job ends when the report and the scrap/ and review/ copies exist. Handing them over to P2
+      (reporting, line feedback) is a manual step and is out of scope for transistor-damage-detection.
     four_forces:
-      push: Looking at each image by hand is slow; an unattended batch that aborts on one error leaves no report at all (skeleton gap, SPIKE wave-decisions "one failed Jev call aborts the batch").
+      push: Looking at each image by hand is slow; an unattended batch that aborts on one error leaves no report at all (skeleton gap, SPIKE wave-decisions "one failed Jev call aborts the batch"); a mistyped run gives no usable feedback.
       pull: One command produces report.md, report.json and scrap/ + review/ folders with a description per image.
       anxiety: The AI passes a defective part (C10, zero false passes); a Jev outage turns a nightly run into nothing.
       habit: Manual visual inspection; anything unclear is looked at by a person anyway (REVIEW keeps that habit).
@@ -81,3 +84,6 @@ changelog:
   - date: 2026-10-30
     feature: transistor-damage-detection
     change: Created. J1 lifted from the DISCOVER journey seed; J2, J3 added from stakeholder decisions of 2026-10-30.
+  - date: 2026-11-06
+    feature: transistor-damage-detection
+    change: J1 scope note added (P2 hand-off out of scope); mistyped-run frustration added to its push force (US-05).

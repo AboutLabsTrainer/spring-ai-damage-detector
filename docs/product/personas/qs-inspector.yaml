@@ -6,8 +6,8 @@ status: illustrative showcase persona, UNVALIDATED (DISCOVER E6; 0 interviews)
 context: >
   Receives top-view 1024x1024 images of TO-92 transistors on a stripboard (stakeholder statement E2;
   sample data is MVTec AD, so a live camera feed is unverified). Runs the batch after a shift and
-  hands scrap records to reporting and to the line (DISCOVER P2).
-goals: [no defective part passes, a complete scrap record per defect, a report even when the AI service glitches]
+  hands scrap records to reporting and to the line by hand, outside this product (DISCOVER P2).
+goals: [no defective part passes, a complete scrap record per defect, a report even when the AI service glitches, a clear reason when a run cannot start]
 vocabulary: [PASS, SCRAP, REVIEW, scrap record, suspected defect, bent lead, cut lead, damaged case, misplaced]
 jobs: [J1]
 created: 2026-10-30

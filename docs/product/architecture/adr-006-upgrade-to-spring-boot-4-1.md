@@ -21,10 +21,11 @@ Accepted (user decision, 2026-10-30). The upgrade is **the first DELIVER step**,
   - the ArchUnit 1.4.x patch.
 - **Boot 4 changes that matter here** (the crafter checks each one; the walking-skeleton acceptance test must stay green after the upgrade):
   - **Spring Framework 7.** `RestClient` stays the Jev client. Core retry now exists in the framework, but it is not used (ADR-004, alternative 1).
-  - **Jackson 3** is the default (`tools.jackson.*` packages, `JsonMapper`). `ReportWriter` uses `com.fasterxml.jackson.databind.ObjectMapper` today and migrates to it. Annotations stay in `com.fasterxml.jackson.annotation`. No Jackson 2 compatibility module is used.
+  - **Jackson 3** is the default (`tools.jackson.*` packages, `JsonMapper`). `ReportWriter` and the test class `WalkingSkeletonSteps` use `com.fasterxml.jackson.databind.ObjectMapper` today, and **both migrate in DELIVER step 1**. This amends DISTILL's "`WalkingSkeletonSteps` stays as it is": only its JSON import and mapper change, not its scenario or its assertions. Annotations stay in `com.fasterxml.jackson.annotation`. No Jackson 2 compatibility module is used. DELIVER step 1 verifies the test classpath: no `com.fasterxml.jackson.databind` reached through a test library is used by project code, and JsonPath still reads reports with its default provider.
   - **Modularised starters.** `RestClient.Builder` auto-configuration comes from the RestClient starter (`spring-boot-starter-restclient`) instead of bare `spring-web`. Test support moves to per-module test starters where needed.
-  - **HTTP client property names changed in Boot 4.** The Jev timeouts therefore move to `detector.jev.connect-timeout` and `detector.jev.read-timeout`, applied by the composition root (ADR-004). They do not rely on Boot's global property names.
-  - **JUnit 6 / JUnit Platform** managed by Boot 4.1. Check the Cucumber engine and the `junit-platform-suite` runner against it.
+  - **HTTP client property names changed in Boot 4.** The Jev timeouts therefore move to `detector.jev.connect-timeout` and `detector.jev.read-timeout`, passed to `OpenRouterJev` as plain values (ADR-004). They do not rely on Boot's global property names. The `spring.http.client.*` keys in `application.yml` are **removed** in DELIVER step 1.
+  - **JUnit 6 / JUnit Platform** managed by Boot 4.1. Check the Cucumber engine, `cucumber-picocontainer` and the `junit-platform-suite` runner against it, and `MockRestServiceServer.bindTo(RestClient.Builder)`.
+- **jqwik is removed** (user decision Q1, 2026-11-06). Layer-1 specifications use JUnit `@ParameterizedTest`, so there is no extra test engine to verify against JUnit 6.
 
 ## Alternatives considered
 1. **Stay on 3.5.16 without patches.** Rejected: no OSS security or bug fixes since 2026-06-30, which contradicts C1. Every later upgrade gets more expensive as the stories add code.

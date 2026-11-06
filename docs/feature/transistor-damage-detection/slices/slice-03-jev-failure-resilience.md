@@ -1,20 +1,24 @@
 # Slice 03: The batch finishes despite Jev failures
 
-**Story:** US-03 · **Job:** J1 · **Persona:** P1 Petra Lindner (illustrative) · **Estimate:** ≤1 day (reference class: per-item error handling plus a report field in an existing pipeline)
+**Story:** US-03 · **Job:** J1 · **Persona:** P1 Petra Lindner (illustrative) · **Estimate:** 1 day (reference class: per-item error handling plus a report field in an existing pipeline)
+
+**Execution order:** 01 → 02 → **03** → 05 → 04. The refusal feedback that was first planned here moved to slice 05 (D24, user decision Q2, 2026-11-06).
 
 ## Goal
-A failed Jev call is retried with increasing waits. If it still fails, that image becomes REVIEW with the error as its description, and the batch continues and counts the errors.
+A transient Jev failure is retried with increasing waits. If the tool gives up, that image becomes REVIEW with the error as its description, and the batch continues and counts the errors.
 
 ## IN
-- Retry with increasing waits, default 3 attempts in total, configurable.
+- UC-1 (user-confirmed 2026-10-30): transient failures (timeout, connection error, HTTP 408/429/5xx, unreadable answer) are retried with increasing waits, default 3 attempts in total, configurable (DDD-7). Other HTTP 4xx errors are not retried: `Jev call failed after 1 attempt: HTTP <code> <reason>`.
+- Q3 (user-confirmed 2026-11-06, amends UC-1): a 429 with `Retry-After` at or below `max-backoff` waits that long. Above it, the tool gives up at once with `Jev call failed after N attempt(s): HTTP 429 Too Many Requests (Retry-After <n> s exceeds max-backoff)` (DDD-6).
 - Error → REVIEW, description `Jev call failed after N attempts: <reason>`, copy plus `.txt` in `review/`.
 - Jev error count in the console line, report.md and report.json (per-image error flag).
-- All-failed guard (D14, PO-proposed): the report is still written, the console names OPENROUTER_API_KEY and the network, and the exit code is non-zero.
+- All-failed guard (D14, user-confirmed): the report is still written, the console names OPENROUTER_API_KEY and the network, exit 3.
 - Evaluate mode counts errored images as not passed (at every swept threshold).
-- D23/INV-5: missing arguments, a missing input folder, an input folder without images, and any unexpected exception each give one actionable message with no stack trace and a non-zero exit code.
+- INV-6 (D25, Q5): reports are written only at the end of a run, through a temp file and a rename. Exit 130, 143 or 137 means interrupted. The user reruns into a fresh output folder.
 
 ## OUT
-- Rerunning only the failed images, circuit breakers, rate-limit budgeting, parallel calls.
+- General refusals: arguments, folders, key, settings, unexpected exceptions (slice 05).
+- Rerunning only the failed images, resuming an interrupted run, circuit breakers, rate-limit budgeting, parallel calls.
 - Unreadable or corrupt local files (Jev rejects them, and that rejection is handled as a Jev error).
 
 ## Learning hypothesis
@@ -25,15 +29,17 @@ A failed Jev call is retried with increasing waits. If it still fails, that imag
 1. Folder good/000.png (GOOD 0.91), good/042.png (503 on every attempt), bent_lead/000.png (BENT_LEAD) → 1 PASS, 1 SCRAP, 1 REVIEW, 1 Jev error. `review/good/042.png.txt` = `REVIEW: Jev call failed after 3 attempts: HTTP 503 Service Unavailable`.
 2. 503 once, then BENT_LEAD → SCRAP, 0 Jev errors.
 3. An image that fails on every attempt is never PASS.
-4. 401 on every call for 4 images → 4 REVIEW, the console says `0 of 4 images judged by Jev - check OPENROUTER_API_KEY and network`, non-zero exit.
-5. The API key appears in no error text, log or report.
-6. **Production data:** a real run on 10 images from `images/` (5 good, 5 defects) with a failure forced for part of the run (e.g. network briefly cut) completes with report.md and a non-zero error count. Record it below.
+4. 401 on every call for 4 images → 4 REVIEW, the console says `0 of 4 images judged by Jev - check OPENROUTER_API_KEY and network`, exit 3.
+5. 429 with `Retry-After: 120` and a 10 s limit → REVIEW at once with `Jev call failed after 1 attempt: HTTP 429 Too Many Requests (Retry-After 120 s exceeds max-backoff)`. The remaining images are still inspected.
+6. The API key appears in no error text, log or report.
+7. A run interrupted before the last image leaves no partial report.md or report.json and ends with exit 130, 143 or 137.
+8. **Production data:** a real run on 10 images from `images/` (5 good, 5 defects), with the network switched off for about 10 s during the run, completes with report.md and at least 1 Jev error. Record it below.
 
 ## Dependencies
 - Walking skeleton. Independent of slices 01/02, but should land before long unattended runs and before slice 04 demos.
 
 ## Dogfood moment
-Same day: Petra-style run on 10 real images with the Wi-Fi switched off for a few seconds.
+Same day: Petra-style run on 10 real images with the network switched off for about 10 s.
 
 ## Evidence (fill after the run)
 - Summary line: _pending_

@@ -24,7 +24,7 @@ Accepted in the SPIKE (promotion 2026-10-29, variant A). This ADR records it. 20
    - D12 removes Qwen.
    - The same pipeline with a cloud vision model (e.g. `claude-haiku-5-5`) was **never measured**. Reopening it would need a new SPIKE, and a stronger vision model is out of scope (DISCUSS).
 2. **Python/JS Jev SDK as a sidecar.** Rejected: it adds a second runtime and an inter-process call, which does not fit a single Docker jar. The SDK gives no functional gain over REST.
-3. **Hand-built `java.net.http.HttpClient`.** Rejected: `RestClient` is already wired, honours `spring.http.client.*` timeouts, and maps JSON with Jackson.
+3. **Hand-built `java.net.http.HttpClient`.** Rejected: `RestClient` is already wired, takes its timeouts from the Jev settings (ADR-004), and maps JSON with Jackson.
 
 ## Consequences
 - Positive:
