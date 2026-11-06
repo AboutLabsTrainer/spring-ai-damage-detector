@@ -314,6 +314,16 @@ Apart from the data URL, every request body is identical for every image. The fi
   - no key and no `.env` in the image
 - **Log:** `/out/damage-detector.log`. No runtime monitoring (K4/K5 are measured per run from the reports).
 
+### Deployment topology (DEVOPS, 2026-11-06)
+
+Details: `docs/feature/transistor-damage-detection/feature-delta.md`, "Wave: DEVOPS".
+
+- **Topology:** one short-lived container per run on the local Docker host, with `/in` and `/out` as bind mounts. No orchestration, registry, ports or volumes. Deployment is recreate; rollback is the previous immutable tag `damage-detector:0.1.0-<git-sha12>`.
+- **Image:** multi-stage, Temurin 21 JRE (noble, pinned by digest), `USER 1000:1000`. Documented commands add `--user "$(id -u):$(id -g)"` after `mkdir -p out`, so the output is owned by the invoking host user.
+- **CI:** GitHub Actions once a remote exists, with Jev stubbed and no key.
+- **Limit:** the real-path check (bootstrap step 2) cannot see across Docker mounts. Inside a container it does not detect a host output folder that lies inside the host input folder.
+- **Contract tests:** OQ-5 closed without Spring Cloud Contract or Pact JVM, which supersedes the recommendation under "Integration patterns". The contract is a golden Jev response, the real smoke per slice and the DDD-26 validity check.
+
 ### ADR index
 
 - [ADR-001](adr-001-modular-monolith-cli-with-evaluate-mode.md): Modular monolith CLI; evaluate mode in the same jar

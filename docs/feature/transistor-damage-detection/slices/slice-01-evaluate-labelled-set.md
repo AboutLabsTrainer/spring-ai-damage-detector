@@ -7,7 +7,7 @@
 
 ## IN
 - `--evaluate --input=<labelled folder> --output=<folder>`. The label is the first sub-folder: good, bent_lead, cut_lead, damaged_case, misplaced.
-- Console summary line, `evaluation.md`, `evaluation.json` (per image: path, label, verdict, Jev choice, P(GOOD)).
+- Console summary line, `evaluation.md`, `evaluation.json` (per image: path, label, verdict, Jev choice, P(GOOD); run level: `jevCost`, `elapsedSeconds`, also shown in `evaluation.md`).
 - False-pass list, per-class table (images, not passed = recall, suspected class correct, passed), good auto-pass x/213.
 - Unlabelled images are skipped, counted and not sent to Jev. A missing labelled structure gives a clear error before any Jev call.
 - Non-zero exit when false passes > 0 at the configured threshold (D18, PO-proposed).

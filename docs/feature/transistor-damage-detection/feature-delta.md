@@ -525,7 +525,7 @@ Decision numbers use DDD-n to avoid clashing with D1–D23.
   - Other images are skipped, counted and never sent.
   - At least 1 labelled image is required; otherwise the run is refused with exit 1 and 0 calls.
   - A class with 0 images is shown with 0 rows.
-- **DDD-14:** Evaluate writes only `evaluation.md` and `evaluation.json`, with no scrap/review copies (slice-01 OUT).
+- **DDD-14:** Evaluate writes only `evaluation.md` and `evaluation.json`, with no scrap/review copies (slice-01 OUT). Amended 2026-11-06 (user decision): `evaluation.json` also carries `jevCost` and `elapsedSeconds`, and `evaluation.md` shows both (K5 evidence stays in the report).
   - `evaluation.md` includes the run date (from an injected `Clock`; Jev varies between runs), the false-pass list, the per-class table, sweep rows 0.80–0.95 plus the configured t, the lowest-safe-t line, and the MVTec AD attribution.
   - `evaluation.json` has, per image: path, label, verdict, jevChoice, P(GOOD) and jevError, plus all 50 sweep rows.
 - **DDD-15:** The batch report gains a summary `jevErrors` and `judged`, and a per-image `jevError` flag. Failed images have no choice or probabilities. The console line gains `; N Jev errors in REVIEW`.
@@ -791,3 +791,217 @@ Count (after review iteration 2): **16 EXTEND (14 production incl. `pom.xml`, 2 
 | N15 `Retry-After` above the cap | ADR-004 Decision ("Backoff"); brief.md "Integration patterns"; feature-delta DDD-6 |
 | N16 output dir creation, probe-file leftover | brief.md "Bootstrap sequence" steps 3–4 and "Declared write universe"; ADR-005 decisions 2.3–2.4; feature-delta DDD-29 |
 | N19 UC confirmation | already resolved: `design/upstream-changes.md` (status confirmed 2026-10-30), OQ-2 |
+
+## Wave: DEVOPS / [REF] Environment matrix
+
+Date 2026-11-06. Density: lean (Tier-1 only, no menu). This wave is design only. The Dockerfile, `.dockerignore`, workflow YAML and `scripts/container-check.sh` are built in DELIVER. Machine version: `environments.yaml` in this folder.
+
+| Environment | Platform | Runs | Jev | Key source | Input / output | Purpose |
+|---|---|---|---|---|---|---|
+| `local-jar` | WSL2 (verified host), Linux | `java -jar target/damage-detector-*.jar` | Real; WireMock in `./mvnw verify` | `.env` exported into the shell | Host paths | Development, production-data ACs of slices 01–03 |
+| `docker-run` | WSL2 with Docker Desktop (verified host), Linux with Docker Engine | `docker run … damage-detector:0.1.0` | Real; WireMock in `container-check` | `--env-file .env` or `-e OPENROUTER_API_KEY` | `/in` read-only, `/out` writable | Showcase, slice-04 production-data AC |
+| `ci` | GitHub Actions `ubuntu-latest` (active once a remote exists) | `./mvnw verify`, `docker build`, `container-check` | **Stub only** | No secret. A throwaway canary value satisfies the key probe | Fixtures in `src/test/resources` | Gates. Proves mechanisms, not real accuracy |
+
+No macOS or Windows-native coverage is claimed. The real-Jev numbers (K1, K2, K5) come only from hand runs in `local-jar` or `docker-run`.
+
+## Wave: DEVOPS / [REF] CI/CD pipeline outline
+
+One workflow, `.github/workflows/ci.yml`, with `permissions: contents: read`, no `secrets.*` reference, and PR concurrency cancellation. Actions are pinned by commit SHA when the file is created. Nothing is published: there is no registry and no release job.
+
+| Trigger | `verify` | `mutation` | `image` |
+|---|---|---|---|
+| Pull request to `main` | yes | yes (changed classes) | yes |
+| Push to `main` (merge) | yes | no (already gated on the PR) | yes |
+| Push to a feature branch without a PR | no | no | no |
+| Tag | no | no | no |
+
+| Job | Stages | Blocks on |
+|---|---|---|
+| `verify` | Checkout with full history → secret scan of the history (gitleaks, pinned) → Temurin 21 with Maven cache → `./mvnw -B verify` (compile, unit, the 8 ArchUnit rules, Cucumber/WireMock acceptance) → upload test reports on failure | Any failing test or rule; any secret finding |
+| `mutation` (needs `verify`) | See Mutation testing strategy | Kill rate < 80 % on changed classes |
+| `image` (needs `verify`; added with the Dockerfile in slice 04) | `scripts/container-check.sh`, below | Any failed step |
+
+`scripts/container-check.sh` runs the same way in CI and on the demo host:
+
+1. Plant a per-run canary key in a throwaway `.env` **before** the build. CI has no real key, so a scan without a canary would pass even with a broken `.dockerignore`.
+2. `docker build`.
+3. **K4 / INV-3 image scan.** Fail if any of these is found:
+   - the canary, `sk-or-` or `OPENROUTER_API_KEY=` in `docker image inspect` or `docker history --no-trunc`;
+   - a file named `.env`, or the canary, in **any layer** of `docker save`. A flattened `docker export` would miss a file deleted in a later layer;
+   - the canary inside `/app/app.jar`, unpacked first, because a jar is compressed and a plain grep cannot see into it.
+
+   On the demo host the script also scans for the real key from `.env`, and prints only pass or fail.
+4. **Stub parity (K4).** Start `wiremock/wiremock:3.13.2` on a user-defined Docker network, using the same mappings for both runs. Run the jar (`--detector.jev.base-url=http://localhost:<port>`) and the image (`--detector.jev.base-url=http://wiremock:8080`; dotted properties pass DDD-12). Compare the `report.json` summary (`total`, `pass`, `scrap`, `review`, `judged`, `jevErrors`) and the set of output files. Do not compare dates or absolute paths.
+5. **Run-time INV-3.** The stub runs use the canary as the key, one of them with `--debug`. Fail if the canary appears in `/out` or in the captured stdout or stderr.
+6. **Contract rows.** Assert a missing key gives exit 1 and the INV-5 line, a stub `401` on every call gives exit 3, a stub false pass under `--evaluate` gives exit 2, and every file in `./out` can be deleted by the invoking user.
+
+**Local gates.** No hook framework: a single developer, and the commands above are the whole gate. Run `./mvnw verify` and `scripts/container-check.sh` by hand. **Until a GitHub remote exists, this local run is the only gate.**
+
+**Security, sized to the risk.** Gitleaks plus the K4 scan cover the one asset at risk, the key. SAST, DAST, SBOM and image CVE scanning are left out: there is no service surface and no published image. Revisit if the image is ever published.
+
+## Wave: DEVOPS / [REF] Monitoring contracts
+
+No external stack. A KPI is read from a run artifact or a CI check. CI proves the mechanism with a stub; only a real run proves the value. Full contract: `docs/product/kpi-contracts.yaml`.
+
+| KPI | Target | Value measured from | Mechanism proved by | Signal when breached |
+|---|---|---|---|---|
+| K1 false passes (north star) | 0 | `evaluation.json` images with label ≠ `good` and verdict PASS; summary line; hand run, real Jev | `verify`: stub false-pass scenario | Exit code 2 + list in `evaluation.md` |
+| K2 good auto-pass | Reported; ≥ 50 % informative, no gate | `evaluation.md` sweep row at the configured t | `verify`: sweep scenarios | None (not a gate) |
+| K3 complete batch under Jev failures | 100 % complete, 0 errored PASS | `report.json` `jevErrors`, `judged`, per-image `jevError`; slice-03 real run | `verify`: 2 of 10 calls failing | Failing test; exit 3 if none judged |
+| K4 container parity and no key | 100 % equal counts, 0 key occurrences | `container-check` steps 3–5 | `image` job | Job fails. A leak in a shared image needs the key rotated (see Deployment strategy) |
+| K5 cost and time (guardrail) | ≤ $0.05 and ≤ 10 min per 253 images | `jevCost` and `elapsedSeconds` in `evaluation.json`, shown in `evaluation.md` (user decision 2026-11-06). Copied into the slice evidence | Not measurable in CI (a stub has no cost or latency) | Read by hand. The cost is a lower bound after retries (DDD-15) |
+| G1 no path or label in Jev requests (guardrail) | 0 | WireMock request assertion (UC-3) | `verify`: acceptance test + ArchUnit rule 2 | Failing test |
+
+## Wave: DEVOPS / [REF] Deployment strategy
+
+**Strategy: recreate.** A batch process has no running service to shift traffic from, so canary, blue-green and rolling do not apply. A release is a new image and the next run uses it.
+
+**Rollback contract (defined first).**
+
+- Every build gets two tags: the moving demo tag `damage-detector:0.1.0` and the immutable `damage-detector:0.1.0-<git-sha12>`. Rollback needs the second one, because rebuilding overwrites the first. Build only from a clean commit, and keep at least the previous SHA tag on the host.
+- **Rollback:** `docker tag damage-detector:0.1.0-<previous-sha> damage-detector:0.1.0`, then rerun. There is no data migration and no state.
+- **Output:** reports are not migrated. Rerun into a fresh `--output` (about $0.04 for all 253 images).
+- **Triggers:** `container-check` fails, an exit 1 on a command that worked before, or verdict counts differ from the jar.
+- **Drill:** before slice 04 closes, build two SHAs, roll back, and run one fixture through the rolled-back tag.
+- **Rollback does not fix a leak.** If a key reached an image, rotate it at OpenRouter first, then delete the image and every shared copy.
+
+**Sharing the image without a registry:** `docker save damage-detector:0.1.0 | gzip > damage-detector-0.1.0.tar.gz`, then `docker load`. Alternatively clone and `docker build` on the target, which needs Docker and access to Maven Central, but no JDK.
+
+## Wave: DEVOPS / [REF] Docker contract (slice 04)
+
+Requirements for the files DELIVER creates. The "Verified" column records tests run on 2026-11-06 on the WSL2 host (Docker Desktop 29.9.2, project on the ext4 filesystem).
+
+| Topic | Contract | Verified |
+|---|---|---|
+| Build | Multi-stage. Stage 1 runs `./mvnw -B -ntp -Dmaven.test.skip=true package` (tests already ran in `verify`), with a BuildKit cache mount on `/root/.m2`. Stage 2 copies only the repackaged jar to `/app/app.jar` | `mvnw` is tracked as executable. It falls back to `.tar.gz` when `unzip` is missing (the JRE image has none), and that URL resolves. **The build itself is not yet run** |
+| Base images | Build: `eclipse-temurin:21.0.13_9-jdk-noble@sha256:114cabb73033ca4ce7ceec3deb62396bc1b716282bae051ed3c1d82e38fcab2d`. Run: `eclipse-temurin:21.0.13_9-jre-noble@sha256:0eda5830ed7b669abc246a8dc520ea8a23cab06f9a8d4b6964109e2f2394e46f` | Tags and digests read from Docker Hub. The JRE image was pulled and reports OpenJDK 21.0.13 LTS. **Flag:** re-check for a newer patch at slice 04. A pin means patches are manual, and Boot 4.1 on this image is proved only by `container-check` |
+| Entry point | Exec form: `ENTRYPOINT ["java","-jar","/app/app.jar"]`, no `CMD`, so no arguments gives the usage refusal. It replaces the base `/__cacert_entrypoint.sh`, which only matters for `USE_SYSTEM_CA_CERTS` | Exit code propagation verified with a stub command (`exit 3` → host `rc=3`) |
+| JVM flags | Do **not** set `JAVA_TOOL_OPTIONS`: the JVM prints `Picked up …` on stderr, which breaks the one-line rule of INV-5. Put any flag in the entry point | Known JVM behaviour, not tested here |
+| User | `USER 1000:1000`, the base image's existing `ubuntu` user, so no `useradd` is needed. The documented commands add `--user "$(id -u):$(id -g)"` | See the next four rows |
+| Writing to `/out` | The numeric UID passes through to the host. `--user` with the host UID writes files the host user owns and can delete | Verified. A root container left root-owned files the host user could **not** delete, which is why the image is non-root |
+| Wrong UID | Fails safe: the write probe gives `Cannot write to output folder /out: permission denied`, exit 1 | Verified at shell level (UID 1234 on a UID 1000 folder: denied) |
+| `./out` missing | Docker creates it **root-owned** and the run is refused. So every documented command starts with `mkdir -p out` | Verified |
+| Unknown UID | `user.home` is `/` and `user.name` is `?`. Harmless, because the app writes only below `--output` and the JVM uses `/tmp` | Verified for the JVM. Confirm with the real app in `container-check`, which CI covers (runner UID differs from 1000) |
+| Mounts | Do not create `/in` or `/out` in the image, and declare no `VOLUME`. A forgotten `-v` is then refused (`/` is not writable), instead of writing into a layer that `--rm` throws away | Follows from the rows above; asserted in `container-check` |
+| Secret | `OPENROUTER_API_KEY` comes only from `--env-file .env` or `-e OPENROUTER_API_KEY` (name only, passed through from the shell). Never `-e KEY=value`, which puts it in shell history. Never `ENV`, `ARG` or `--build-arg` | `.env` format matters: `export KEY=…` is rejected by Docker (exit 125), and quotes become part of the value (a later 401). The current `.env` is valid: plain `KEY=value`, no CRLF |
+| `.dockerignore` | Allow-list: `*`, then `!pom.xml`, `!mvnw`, `!.mvn`, `!src/main`. Repeat the explicit denials after it: `**/.env`, `**/.env.*`, `images/`, `out/`, `target/`, `.git/`. The MVTec test fixtures therefore stay out as well | Verified with a scratch build: only `pom.xml`, `mvnw`, `.mvn/` and `src/main/` entered the context; a root `.env`, a nested `.env`, `.env.local`, `images/`, `out/`, `target/` and `src/test/` did not. `container-check` keeps this proved with the canary |
+| Metadata | `ARG GIT_SHA` feeds the label `org.opencontainers.image.revision`. No `EXPOSE`, no `HEALTHCHECK` (batch process) | n/a |
+| Network | Outbound HTTPS to `openrouter.ai`. No ports published | Proved by the slice-04 production-data AC |
+
+**Exit codes.** `docker run` returns the application's code unchanged: 0 OK, 1 refused or failed, 2 false pass, 3 none judged (precedence 1 > 3 > 2). Scripts must read **125–127** as a Docker failure (125 verified with a bad env file) and 137 or 143 as killed. None of these is a detector result. Stdout and stderr pass through unchanged, because `-t` is not used.
+
+**Limit in Docker (DDD-22).** The real-path check inside the container sees `/in` and `/out` as unrelated mounts. It cannot detect that the **host** output folder lies inside the host input folder. Keep `./out` beside `./images`, never inside it. Nothing else guards this case.
+
+**Demo commands**
+
+```bash
+# Build: needs Docker only, no JDK or Maven on the host
+SHA=$(git rev-parse --short=12 HEAD)
+docker build --build-arg GIT_SHA="$SHA" -t damage-detector:0.1.0 -t "damage-detector:0.1.0-$SHA" .
+
+# Batch inspection
+mkdir -p out
+docker run --rm --user "$(id -u):$(id -g)" --env-file .env \
+  -v "$PWD/images:/in:ro" -v "$PWD/out:/out" \
+  damage-detector:0.1.0 --input=/in --output=/out
+echo "exit code: $?"
+
+# Evaluation, with the K5 wall clock
+mkdir -p out
+time docker run --rm --user "$(id -u):$(id -g)" --env-file .env \
+  -v "$PWD/images:/in:ro" -v "$PWD/out:/out" \
+  damage-detector:0.1.0 --evaluate --input=/in --output=/out/eval
+echo "exit code: $?"   # 2 = false pass at the configured threshold
+```
+
+Use a fresh output folder per run: old `scrap/` and `review/` files stay in place when a folder is reused. Windows paths below `/mnt/c` are untested, so keep the project on the WSL filesystem. The write probe refuses a mount that does not work.
+
+## Wave: DEVOPS / [REF] Mutation testing strategy
+
+**Per-feature** (already in `CLAUDE.md`): PIT runs after refactoring in each delivery, on modified files only, with a kill rate gate of ≥ 80 %. This fits a codebase far below 50k LOC.
+
+- **Scope:** production Java classes added or modified against the base branch: `git diff --name-only --diff-filter=AM origin/main...HEAD -- 'src/main/java/*.java'`, mapped to class names and passed as `-DtargetClasses`. No such file means the job passes without running PIT. A locally computed list is used rather than `scmMutationCoverage`, which would need a `<scm>` block.
+- **Gate:** `-DmutationThreshold=80`. This counts unkilled and uncovered mutants, so a class without a fast test fails the gate.
+- **Excluded classes:** wiring only: `DamageDetectorApplication`, `DetectorConfiguration`, `DetectorProperties`.
+- **Tests used:** JUnit unit and adapter tests. Exclude the Cucumber suite and ArchUnit (`excludedTestClasses`), which would be slow or kill nothing. Consequence: `OpenRouterJev`, `RetryingJev` and `ErrorFeedback` need direct tests, with WireMock where a test needs HTTP. Acceptance coverage alone counts as uncovered.
+- **Where:** locally by the crafter during DELIVER, and in the `mutation` job on PRs (`fetch-depth: 0`, 15-minute timeout, HTML report as artifact).
+- **Build change for DELIVER step 1:** PIT is not in `pom.xml` and is missing from the DESIGN technology table and the ADR-006 verification list. Add `pitest-maven` and `pitest-junit5-plugin` (latest on Maven Central today: 1.30.2 and 1.2.3). **Compatibility with Boot 4.1's JUnit 6 is unverified**, so add it to the OQ-6 checks.
+
+## Wave: DEVOPS / [REF] Observability stack
+
+| Signal | Tool | Notes |
+|---|---|---|
+| Logs | `<output>/damage-detector.log` (`/out/damage-detector.log` in Docker). `root: warn`, console off, `--debug` on demand | The log survives `--rm` because it is on the mount. Refusals at bootstrap steps 1–4 have no log file (ADR-005) |
+| Metrics | `report.md/json`, `evaluation.md/json`, the summary line | Read per run. Nothing is scraped |
+| Traces | None | One process, one sequential loop |
+| Alerts | Exit code plus one stderr line (INV-5) | For the person or script that started the run |
+
+No monitoring stack, by user decision. No SLO error budgets either: the KPI targets act as per-run gates, and there is no continuous service to budget. Continuous learning: no. DORA metrics are not tracked for a single-developer showcase with no production deployment.
+
+## Wave: DEVOPS / [REF] Branching strategy
+
+**GitHub Flow.** `main` stays releasable. Work happens on short-lived `feature/*` branches and merges by PR once `verify`, `mutation` and (from slice 04) `image` are green. CI triggers follow this: PR to `main` and push to `main` only. No `paths-ignore`, because a skipped required check stays pending and blocks the merge. Branch protection on `main`: required status checks, no force push. The single developer needs no required reviewer. The current branch `feature/transistor-damage-detection` becomes the first PR once a remote exists.
+
+## Wave: DEVOPS / [REF] Coexistence matrix
+
+| Must keep working | Risk | Contract |
+|---|---|---|
+| `java -jar` and `docker run` on the same `./out` | Files owned by another UID cannot be overwritten | `--user` with the host UID makes both the same owner |
+| One `.env` for jar and Docker | `export` or quotes break `--env-file` | Plain `KEY=value`; load it for the jar with `set -a; . ./.env; set +a` |
+| Batch and evaluate output | Both write `damage-detector.log` | Separate folders (`/out`, `/out/eval`, as documented) |
+| Two runs at once on one output | Shared probe file, log and reports | Not supported. One run per output folder |
+| Previous image tags | A rebuild moves `:0.1.0` | SHA tags stay; prune by hand and keep the previous one |
+| Other containers on the host | Port, volume or network clashes | The detector publishes no port and uses no named volume. `container-check` removes its own network and containers |
+| `./mvnw verify` without Docker | A Docker-based test would break `local-jar` | Container checks stay outside `verify` (Upstream Changes, item 3) |
+| Git hook managers | None installed | Not applicable |
+
+## Wave: DEVOPS / [REF] Pre-requisites
+
+**From DESIGN, which the platform must satisfy:**
+- DELIVER step 1 (Boot 4.1, ADR-006) lands before any CI run counts. Latest 4.1 patch on Maven Central today: 4.1.2 (seen only, to be verified and pinned in step 1, OQ-6).
+- `./mvnw verify` runs with no key and no `images/` folder. Checked for the skeleton: the tests pass `--detector.jev.api-key=test-key` and load fixtures from the classpath.
+- DDD-10 and DDD-18 probes exist before slice 04, because the Docker failure modes rely on them. Slice 03 lands first, because it adds the INV-5 feedback.
+
+**For DELIVER to build:**
+- Slice 04: `Dockerfile`, `.dockerignore`, `scripts/container-check.sh`, the `image` CI job, README commands, and `out/` added to `.gitignore`. Today `./out` is **not** ignored, and it would hold MVTec image copies.
+- First CI commit: `.github/workflows/ci.yml` with `verify` and `mutation`.
+
+**On the demo host:** Docker Engine or Docker Desktop, a `.env` with a credited key, and a local `images/` folder.
+
+## Wave: DEVOPS / [REF] OQ-5 resolution
+
+**Resolved: use neither Spring Cloud Contract nor Pact JVM.** Both need the provider to take part: Pact needs provider verification and Spring Cloud Contract needs a provider build. OpenRouter will do neither for an alpha API, so a consumer-side contract would only restate our own WireMock stubs and could not detect provider drift. The scheduled paid check is also out, because CI has no key (user decision).
+
+The proportional contract has three parts:
+
+1. **Golden response:** commit one real, unmodified Jev response as a test fixture and serve it through WireMock, so a parser change is tested against a real answer. Refresh it at each production-data run.
+2. **Real smoke by hand:** each slice's production-data AC is the provider check (DoD 4), about $0.00015 per image. DISTILL tags and documents it.
+3. **Fail-safe drift at run time:** DDD-26 already turns any changed answer into `unreadable answer`, then REVIEW, then a `jevErrors` count, and exit 3 if nothing was judged. Drift cannot produce a false pass.
+
+Reopen this only if OpenRouter publishes a versioned schema or a provider-side contract.
+
+## Wave: DEVOPS / [REF] Wave decisions summary
+
+- **Key decisions:**
+  - Recreate deployment; rollback through an immutable SHA tag.
+  - Multi-stage image on pinned Temurin 21.0.13 (noble), `USER 1000:1000`, plus `--user` in every documented command.
+  - One GitHub Actions workflow with `verify`, `mutation`, `image`; no publishing, no secrets.
+  - K4 is proved with a planted canary, across all layers and inside the jar.
+  - Per-feature PIT on changed classes, ≥ 80 %.
+  - GitHub Flow.
+  - OQ-5 closed without a contract-test tool.
+- **Infrastructure summary:** environments `local-jar`, `docker-run`, `ci`. No orchestration, registry, cloud resources or monitoring stack. The product's own outputs are the observability.
+- **Constraints:**
+  - The key exists only at run time (INV-3), and CI uses a canary.
+  - Real-Jev KPIs (K1, K2, K5) are hand-run.
+  - CI starts only once a remote exists. The user will add a **public** GitHub repo (decision 2026-11-06): tracked MVTec fixtures are redistributed under CC BY-NC-SA 4.0 with attribution in `src/test/resources/transistor-images/README.md`; the showcase stays non-commercial.
+  - One run per output folder.
+  - The host output must not lie inside the host input.
+- **Upstream changes.** No architecture change is forced, so there is no `devops/upstream-changes.md`. These wording and scope refinements apply:
+  1. **Documented `docker run` command.** US-04, the DISCUSS and DESIGN driving ports and the slice-04 brief omit `--user` and `mkdir -p out`. The commands above replace them for the README. The old form still works where the host UID is 1000 and `./out` exists, and is refused safely otherwise.
+  2. **Earned Trust row "Input/output relation" (brief.md).** It does not hold across Docker mounts (see Limit in Docker). Documented, no code change.
+  3. **DoD 1 versus US-04.** The US-04 scenarios need Docker, so they run in `scripts/container-check.sh`, not in `./mvnw verify`. Testcontainers was rejected because `verify` would then need Docker. DISTILL may still choose a `@container` Cucumber profile if `verify` stays Docker-free.
+  4. **Contract tests.** The "Contract tests recommended" lines in brief.md and in DESIGN Driven ports are superseded by OQ-5 above.
+  5. **K5 evidence.** The DISCUSS handoff says K4 and K5 are measured "from the report files". Under DDD-14, `evaluation.json` and `evaluation.md` hold no cost and no duration. Today K5 is on stdout plus `time`, which is what the monitoring contract uses. **Resolved 2026-11-06:** the user chose to add `jevCost` and `elapsedSeconds` to `evaluation.json` (DDD-14 amended); slice 01 implements this.
+  6. **Ownership.** The slice-04 brief and US-04 name DEVOPS as the implementer. This wave delivers the contract, and DELIVER builds it.
+  7. **Mutation tooling.** PIT joins the DELIVER step 1 version checks (OQ-6).
