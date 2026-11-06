@@ -3,6 +3,8 @@ package de.aboutlabs.damagedetector.jev;
 import de.aboutlabs.damagedetector.DetectorProperties;
 import de.aboutlabs.damagedetector.domain.Jev;
 import de.aboutlabs.damagedetector.domain.JevJudgement;
+import de.aboutlabs.damagedetector.probe.ProbeResult;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -10,7 +12,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.client.RestClient;
 
 /** Driven adapter: Jev through the OpenRouter Decisions API (alpha). Sends the image as a data URL, never its name. */
-public class OpenRouterJev implements Jev {
+public class OpenRouterJev implements Jev, AttemptSource {
 
     private static final String DECISIONS_PATH = "/api/alpha/decisions";
 
@@ -26,6 +28,25 @@ public class OpenRouterJev implements Jev {
             .defaultHeader("Authorization", "Bearer " + properties.apiKey())
             .build();
         this.model = properties.model();
+    }
+
+    // SCAFFOLD: true -- DDD-35: plain values, nothing validated or built here. DELIVER drops the constructor above and judge().
+    public OpenRouterJev(RestClient.Builder restClientBuilder, String baseUrl, String model, String apiKey,
+                         Duration connectTimeout, Duration readTimeout) {
+        this.restClient = null;
+        this.model = model;
+    }
+
+    // SCAFFOLD: true
+    @Override
+    public AttemptResult attempt(byte[] image, String mediaType) {
+        throw new AssertionError("Not yet implemented -- RED scaffold");
+    }
+
+    // SCAFFOLD: true
+    @Override
+    public ProbeResult probe() {
+        throw new AssertionError("Not yet implemented -- RED scaffold");
     }
 
     @Override

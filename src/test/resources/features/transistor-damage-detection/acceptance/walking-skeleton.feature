@@ -4,6 +4,7 @@ Feature: Batch inspection of transistor images
   I want every image in a folder judged PASS, SCRAP or REVIEW
   so that good parts pass and scrap is documented with its image and a description.
 
+  @contract-shape:bounded-change
   Scenario: A good-looking part passes and a part with a cut lead is documented as scrap
     Given an input folder with one good-looking transistor image and one transistor image with a cut lead
     And Jev judges the good-looking image GOOD with P(GOOD) 0.91

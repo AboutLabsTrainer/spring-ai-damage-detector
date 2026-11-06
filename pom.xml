@@ -21,6 +21,9 @@
         <java.version>21</java.version>
         <cucumber.version>7.20.1</cucumber.version>
         <wiremock.version>3.13.2</wiremock.version>
+        <!-- Which acceptance scenarios run: @pending stays out until DELIVER enables it, one at a time. -->
+        <acceptance.inprocess.tags>not @pending and not @driving_adapter and not @container</acceptance.inprocess.tags>
+        <acceptance.realprocess.tags>@driving_adapter and not @pending and not @container</acceptance.realprocess.tags>
     </properties>
 
     <dependencyManagement>
@@ -75,6 +78,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>io.cucumber</groupId>
+            <artifactId>cucumber-picocontainer</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
             <version>${wiremock.version}</version>
@@ -87,6 +95,34 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <cucumber.filter.tags>${acceptance.inprocess.tags}</cucumber.filter.tags>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!-- @driving_adapter scenarios start the repackaged jar, which only exists after the package phase. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <systemPropertyVariables>
+                        <cucumber.filter.tags>${acceptance.realprocess.tags}</cucumber.filter.tags>
+                        <detector.jar>${project.build.directory}/${project.build.finalName}.jar</detector.jar>
+                    </systemPropertyVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>
