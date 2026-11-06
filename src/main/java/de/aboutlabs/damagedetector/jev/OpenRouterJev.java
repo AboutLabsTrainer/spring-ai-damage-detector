@@ -8,7 +8,10 @@ import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import org.springframework.boot.http.client.ClientHttpRequestFactoryBuilder;
+import org.springframework.boot.http.client.HttpClientSettings;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 /** Driven adapter: Jev through the OpenRouter Decisions API (alpha). Sends the image as a data URL, never its name. */
@@ -19,15 +22,24 @@ public class OpenRouterJev implements Jev, AttemptSource {
     private final RestClient restClient;
     private final String model;
 
-    public OpenRouterJev(RestClient.Builder restClientBuilder, DetectorProperties.Jev properties) {
+    public OpenRouterJev(RestClient.Builder restClientBuilder, DetectorProperties.Jev properties,
+                         Duration connectTimeout, Duration readTimeout) {
         if (properties.apiKey() == null || properties.apiKey().isBlank()) {
             throw new IllegalStateException("No Jev API key: set the OPENROUTER_API_KEY environment variable");
         }
         this.restClient = restClientBuilder
+            .requestFactory(timedRequestFactory(connectTimeout, readTimeout))
             .baseUrl(properties.baseUrl())
             .defaultHeader("Authorization", "Bearer " + properties.apiKey())
             .build();
         this.model = properties.model();
+    }
+
+    private static ClientHttpRequestFactory timedRequestFactory(Duration connectTimeout, Duration readTimeout) {
+        HttpClientSettings limits = HttpClientSettings.defaults()
+            .withConnectTimeout(connectTimeout)
+            .withReadTimeout(readTimeout);
+        return ClientHttpRequestFactoryBuilder.jdk().build(limits);
     }
 
     // SCAFFOLD: true -- DDD-35: plain values, nothing validated or built here. DELIVER drops the constructor above and judge().

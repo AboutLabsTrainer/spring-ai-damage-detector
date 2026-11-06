@@ -9,8 +9,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import de.aboutlabs.damagedetector.DamageDetectorApplication;
@@ -29,6 +27,8 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 public class WalkingSkeletonSteps {
 
@@ -36,7 +36,7 @@ public class WalkingSkeletonSteps {
     private static final String CUT_LEAD_IMAGE = "cut_lead/000.png";
     private static final String DECISIONS_PATH = "/api/alpha/decisions";
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final JsonMapper json = new JsonMapper();
     private WireMockServer jev;
     private Path workDir;
     private Path inputDir;

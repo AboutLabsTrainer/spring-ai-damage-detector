@@ -19,6 +19,7 @@ class DetectorConfiguration {
 
     @Bean
     Jev jev(RestClient.Builder restClientBuilder, DetectorProperties properties) {
-        return new OpenRouterJev(restClientBuilder, properties.jev());
+        DetectorProperties.Jev jev = properties.jev();
+        return new OpenRouterJev(restClientBuilder, jev, jev.connectTimeout(), jev.readTimeout());
     }
 }

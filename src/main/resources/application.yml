@@ -2,10 +2,6 @@ spring:
   main:
     banner-mode: off
     web-application-type: none
-  http:
-    client:
-      connect-timeout: 10s
-      read-timeout: 120s
 
 logging:
   level:
@@ -17,3 +13,5 @@ detector:
     base-url: https://openrouter.ai
     model: typesafe/jev-1.13
     api-key: ${OPENROUTER_API_KEY:}
+    connect-timeout: 10s
+    read-timeout: 30s

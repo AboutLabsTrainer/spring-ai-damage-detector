@@ -1,5 +1,6 @@
 package de.aboutlabs.damagedetector;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
@@ -13,7 +14,9 @@ public record DetectorProperties(@DefaultValue("0.86") double passThreshold, @De
     public record Jev(
         @DefaultValue("https://openrouter.ai") String baseUrl,
         @DefaultValue("typesafe/jev-1.13") String model,
-        String apiKey) {
+        String apiKey,
+        @DefaultValue("10s") Duration connectTimeout,
+        @DefaultValue("30s") Duration readTimeout) {
 
         @Override
         public String toString() {

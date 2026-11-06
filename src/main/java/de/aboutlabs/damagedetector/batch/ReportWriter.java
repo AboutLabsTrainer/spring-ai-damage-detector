@@ -1,6 +1,5 @@
 package de.aboutlabs.damagedetector.batch;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import de.aboutlabs.damagedetector.domain.BatchReport;
 import de.aboutlabs.damagedetector.domain.Inspection;
 import de.aboutlabs.damagedetector.domain.PassPolicy;
@@ -14,6 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Driven adapter: writes report.json, report.md and copies every SCRAP/REVIEW image (plus a .txt description)
@@ -22,18 +22,18 @@ import org.springframework.stereotype.Component;
 @Component
 class ReportWriter {
 
-    private final ObjectMapper objectMapper;
+    private final JsonMapper jsonMapper;
     private final PassPolicy passPolicy;
 
-    ReportWriter(ObjectMapper objectMapper, PassPolicy passPolicy) {
-        this.objectMapper = objectMapper;
+    ReportWriter(JsonMapper jsonMapper, PassPolicy passPolicy) {
+        this.jsonMapper = jsonMapper;
         this.passPolicy = passPolicy;
     }
 
     void write(BatchReport report, Path input, Path output) {
         try {
             Files.createDirectories(output);
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(output.resolve("report.json").toFile(), toJson(report));
+            Files.writeString(output.resolve("report.json"), jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(toJson(report)));
             Files.writeString(output.resolve("report.md"), toMarkdown(report));
             for (Inspection inspection : report.notPassed()) {
                 document(inspection, input, output);
