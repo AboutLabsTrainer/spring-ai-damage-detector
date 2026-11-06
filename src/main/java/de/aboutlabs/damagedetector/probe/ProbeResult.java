@@ -1,4 +1,3 @@
-// SCAFFOLD: true
 package de.aboutlabs.damagedetector.probe;
 
 import java.util.List;

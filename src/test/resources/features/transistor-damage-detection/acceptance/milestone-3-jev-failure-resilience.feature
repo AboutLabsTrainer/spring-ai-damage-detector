@@ -303,7 +303,7 @@ Feature: The batch finishes even when Jev fails for some images
 
   Rule: What Petra sees and leaves behind is the same with details on the console
 
-    @pending @US-03 @driving_adapter @real-io @adapter-integration @contract-shape:bounded-change
+    @US-03 @driving_adapter @real-io @adapter-integration @contract-shape:bounded-change
     Scenario: Batch result can be read from the command line
       Given an input folder with the images good/000.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -330,7 +330,7 @@ Feature: The batch finishes even when Jev fails for some images
         | rejects every call with "503 Service Unavailable" | as usual                    |
         | rejects every call with "503 Service Unavailable" | with details on the console |
 
-    @pending @US-03 @driving_adapter @real-io @contract-shape:bounded-change
+    @US-03 @driving_adapter @real-io @contract-shape:bounded-change
     Scenario: Details on the console change nothing about the result
       Given an input folder with the images good/000.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -339,7 +339,7 @@ Feature: The batch finishes even when Jev fails for some images
       Then the inspection report counts 1 PASS, 1 SCRAP, 0 REVIEW and 0 Jev errors
       And the run ends successfully
 
-    @pending @US-03 @driving_port @real-io @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @contract-shape:bounded-change
     Scenario: PNG and JPEG images are inspected and other files are ignored
       Given an input folder with the images good/000.png, good/001.jpg, good/002.JPG and good/003.jpeg
       And the input folder also holds the file notes.txt
@@ -350,7 +350,7 @@ Feature: The batch finishes even when Jev fails for some images
       When Petra runs the batch inspection
       Then the inspection report counts 4 PASS, 0 SCRAP, 0 REVIEW and 0 Jev errors
 
-    @pending @US-03 @driving_port @real-io @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @contract-shape:bounded-change
     Scenario: A folder that already holds files keeps them
       Given an input folder with the images good/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91

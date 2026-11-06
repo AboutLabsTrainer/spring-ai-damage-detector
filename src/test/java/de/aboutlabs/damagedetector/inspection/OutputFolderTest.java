@@ -17,7 +17,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** The write port's root rule cannot be reached through the CLI, because relative paths come from the input walk. */
-@Disabled("pending: slice 01 writes through it, slice 03 needs its atomic writes, slice 05 its probe (DDD-20, DDD-29, DDD-34)")
 class OutputFolderTest {
 
     @TempDir
@@ -48,6 +47,7 @@ class OutputFolderTest {
         assertThat(output).isEmptyDirectory();
     }
 
+    @Disabled("pending: slice 05, the probe's refusal (DDD-33, DDD-34)")
     @Test
     void the_probe_refuses_a_read_only_folder() throws IOException {
         assumeNotRoot();
@@ -60,6 +60,7 @@ class OutputFolderTest {
         Files.setPosixFilePermissions(output, PosixFilePermissions.fromString("rwxr-xr-x"));
     }
 
+    @Disabled("pending: slice 05, the probe's leftover file (DDD-29)")
     @Test
     void the_probe_overwrites_a_leftover_probe_file_from_a_killed_run() throws IOException {
         Path output = Files.createDirectory(temp.resolve("out"));
@@ -87,6 +88,7 @@ class OutputFolderTest {
         assertThatThrownBy(() -> output.writeBytes(path, new byte[] {1})).isInstanceOf(IllegalArgumentException.class);
     }
 
+    @Disabled("pending: slice 03, atomic writes (DDD-34)")
     @Test
     void a_write_leaves_no_temp_file() throws IOException {
         OutputFolder.rootedAt(temp.resolve("out")).writeString("report.md", "done");
@@ -96,6 +98,7 @@ class OutputFolderTest {
         }
     }
 
+    @Disabled("pending: slice 03, atomic writes (DDD-34)")
     @Test
     void a_failed_write_deletes_its_temp_file() throws IOException {
         Path root = Files.createDirectory(temp.resolve("out"));
@@ -108,6 +111,7 @@ class OutputFolderTest {
         assertThat(root.resolve("report.json.tmp")).doesNotExist();
     }
 
+    @Disabled("pending: slice 03, atomic writes (DDD-34)")
     @Test
     void a_failed_replacement_leaves_the_old_file_whole() throws IOException {
         assumeNotRoot();

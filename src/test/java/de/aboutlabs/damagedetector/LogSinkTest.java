@@ -3,10 +3,8 @@ package de.aboutlabs.damagedetector;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
-@Disabled("pending: slice 05, LogSink (DDD-11, DDD-28)")
 class LogSinkTest {
 
     @Test

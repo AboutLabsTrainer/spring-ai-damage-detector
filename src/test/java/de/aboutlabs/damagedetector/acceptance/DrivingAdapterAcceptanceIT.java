@@ -10,9 +10,9 @@ import org.junit.platform.suite.api.Suite;
 
 /**
  * Runs the @driving_adapter scenarios against the repackaged jar, so it belongs to the integration-test phase.
- * The tag filter comes from the pom. While every such scenario is @pending this suite finds nothing, hence no failIfNoTests.
+ * The tag filter comes from the pom. A suite that finds no scenario fails.
  */
-@Suite(failIfNoTests = false)
+@Suite
 @IncludeEngines("cucumber")
 @SelectClasspathResource("features/transistor-damage-detection/acceptance")
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "de.aboutlabs.damagedetector.acceptance")

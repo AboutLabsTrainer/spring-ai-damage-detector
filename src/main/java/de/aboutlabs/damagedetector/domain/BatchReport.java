@@ -17,8 +17,20 @@ public record BatchReport(List<Inspection> inspections) {
         return inspections.isEmpty() ? 0.0 : (double) count(Verdict.REVIEW) / inspections.size();
     }
 
-    public double totalCost() {
-        return inspections.stream().mapToDouble(inspection -> inspection.judgement().cost()).sum();
+    public long judged() {
+        return inspections.stream().filter(Inspection::judged).count();
+    }
+
+    public long jevErrors() {
+        return inspections.size() - judged();
+    }
+
+    public double jevCost() {
+        return inspections.stream().mapToDouble(Inspection::cost).sum();
+    }
+
+    public boolean costIsLowerBound() {
+        return inspections.stream().anyMatch(inspection -> inspection.outcome().hadFailedAttempt());
     }
 
     public List<Inspection> notPassed() {

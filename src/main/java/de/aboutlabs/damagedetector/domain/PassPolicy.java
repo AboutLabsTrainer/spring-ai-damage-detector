@@ -2,7 +2,7 @@ package de.aboutlabs.damagedetector.domain;
 
 /**
  * Zero-false-pass rule (C10): PASS only if Jev chose GOOD with P(GOOD) at or above the threshold,
- * SCRAP if Jev chose any defect, REVIEW when Jev leans GOOD but is not sure enough.
+ * SCRAP if Jev chose any defect, REVIEW when Jev leans GOOD but is not sure enough or could not judge at all.
  */
 public record PassPolicy(double passThreshold) {
 
@@ -12,7 +12,14 @@ public record PassPolicy(double passThreshold) {
         }
     }
 
-    public Verdict judge(JevJudgement judgement) {
+    public Verdict judge(JevOutcome outcome) {
+        return switch (outcome) {
+            case JevOutcome.Judged judged -> judge(judged.judgement());
+            case JevOutcome.Failed failed -> Verdict.REVIEW;
+        };
+    }
+
+    private Verdict judge(JevJudgement judgement) {
         if (!judgement.choseGood()) {
             return Verdict.SCRAP;
         }

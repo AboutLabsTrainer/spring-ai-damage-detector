@@ -6,6 +6,9 @@ spring:
 logging:
   level:
     root: warn
+  threshold:
+    # --debug sets the property debug to an empty value, which logback reads as DEBUG; without it the console stays off.
+    console: ${debug:off}
 
 detector:
   pass-threshold: 0.86

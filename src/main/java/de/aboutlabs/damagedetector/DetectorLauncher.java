@@ -1,6 +1,9 @@
-// SCAFFOLD: true
 package de.aboutlabs.damagedetector;
 
+import de.aboutlabs.damagedetector.cli.CliArguments;
+import de.aboutlabs.damagedetector.inspection.OutputFolder;
+import java.nio.file.Path;
+import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
@@ -17,6 +20,11 @@ public final class DetectorLauncher {
 
     @SafeVarargs
     public static int launch(String[] args, ApplicationContextInitializer<ConfigurableApplicationContext>... capabilities) {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        OutputFolder output = OutputFolder.rootedAt(Path.of(CliArguments.of(args).output()));
+        output.probe();
+        SpringApplication application = new SpringApplication(DamageDetectorApplication.class);
+        application.setDefaultProperties(LogSink.defaultPropertiesFor(output.realRoot()));
+        application.addInitializers(capabilities);
+        return SpringApplication.exit(application.run(args));
     }
 }
