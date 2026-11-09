@@ -31,7 +31,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
-/** DELIVER enables these with slice 03; PIT counts them, it does not count Cucumber (DEVOPS, Mutation testing strategy). */
+/**
+ * The adapter against a stubbed Jev endpoint. PIT counts these direct tests, it does not count Cucumber (DEVOPS, Mutation testing strategy).
+ *
+ * <p>CONTRACT_SHAPE: external-effect
+ */
 class OpenRouterJevAdapterTest {
 
     private final JevAdapterFixture fixture = new JevAdapterFixture();

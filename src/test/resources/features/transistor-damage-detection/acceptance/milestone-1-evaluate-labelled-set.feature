@@ -1,6 +1,6 @@
 # Slice 01, US-01. Jonas proves on labelled images that no defect passes.
 # The run-ending signals are the exit codes of ADR-005: successfully 0, refusal 1, false-pass 2, nothing-judged 3.
-# Every scenario is @pending: DELIVER removes the tag from one scenario at a time.
+# Every scenario runs in every verify.
 Feature: See whether any defect passes on the labelled images
   As Jonas, the showcase presenter
   I want the detector scored against the labelled images

@@ -9,7 +9,9 @@ import org.springframework.core.io.ClassPathResource;
 
 /**
  * ADR-005 decision 6: application.yml holds defaults only. A 30 s wait cannot be observed cheaply, so it is read here.
- * The key-and-log guard holds today and runs in every verify; only the defaults that do not exist yet are pending.
+ * The key-and-log guard and the defaults all run in every verify.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
  */
 class ApplicationDefaultsContractTest {
 
