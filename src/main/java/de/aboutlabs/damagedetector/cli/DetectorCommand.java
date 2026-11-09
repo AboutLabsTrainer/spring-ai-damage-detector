@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Driving adapter: {@code java -jar damage-detector.jar [--evaluate] --input=<folder> --output=<folder>}. It builds its per-run objects
- * from the arguments itself, because the walking skeleton starts Spring without the bootstrap. The exit code of the run
+ * from the arguments itself. The exit code of the run
  * reaches the launcher as an {@link ExitCodeGenerator}; the stderr line comes from the pure {@link ErrorFeedback}.
  */
 @Component
