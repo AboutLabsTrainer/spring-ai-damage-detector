@@ -43,6 +43,11 @@ tool never changes the threshold: you decide.
 
 To use a different pass threshold, add `--detector.pass-threshold=0.90`.
 
+A run that cannot work is refused before any image is judged, with one line that names the cause and exit 1: a pass
+threshold that is not a number from 0 to 1, a folder without PNG/JPEG images, a missing or blank API key, or a Jev
+address that is not an http or https address. Any unexpected failure gives one line `Inspection failed: <cause>. See log for
+details.` and exit 1; the details are in `damage-detector.log` in the output folder.
+
 ## Exit codes
 
 | Code | Meaning |

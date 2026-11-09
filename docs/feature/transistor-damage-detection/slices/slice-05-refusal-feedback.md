@@ -51,4 +51,14 @@ Same day: Petra-style run of each mistake on the real `images/` folder.
 None needed. Refusal order and exit codes are fixed in DDD-9 and DDD-10.
 
 ## Evidence (fill after the run)
-- Refusal lines and exit codes: _pending_
+- Refusal lines and exit codes, 2026-11-09, real `images/` folder (253 images), real jar, key from `.env`:
+
+  | Command | stderr line | Exit |
+  |---|---|---|
+  | `--input=images/nope-shift-2026-10-31 --output=out/hand-05` | `Input folder does not exist: images/nope-shift-2026-10-31` | 1 |
+  | `--evalute --input=images --output=out/eval` | `Usage: java -jar damage-detector.jar [--evaluate] --input=<folder> --output=<folder> (unknown option --evalute)` | 1 |
+  | `--input=images --output=images/out` | `Output folder images/out is the same as or inside input folder images: choose an output outside the input` | 1 |
+  | `--input=images --output=out/hand-05b --detector.pass-threshold=1.5` | `Pass threshold must be a number from 0 to 1: set detector.pass-threshold (was 1.5)` | 1 |
+
+- No new cost: key usage read from `https://openrouter.ai/api/v1/key` before the four runs 0.096630786, after 0.096630786 (equal).
+- Nothing written below `images/`: 259 entries before and after. The first three runs wrote nothing; the threshold run left only `damage-detector.log` in its output folder (removed).

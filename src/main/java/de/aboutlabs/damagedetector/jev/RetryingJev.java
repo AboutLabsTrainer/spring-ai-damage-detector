@@ -77,9 +77,9 @@ public class RetryingJev implements Jev, Probe {
         return wait.compareTo(maxBackoff) > 0 ? maxBackoff : wait;
     }
 
-    // SCAFFOLD: true -- step 05-02
+    /** Delegates to the attempt source: key, then address, without a call to Jev. */
     @Override
     public ProbeResult probe() {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        return attemptSource.probe();
     }
 }

@@ -14,7 +14,6 @@ import de.aboutlabs.damagedetector.domain.JevOutcome;
 import de.aboutlabs.damagedetector.probe.ProbeResult;
 import java.time.Duration;
 import java.util.List;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -125,14 +124,12 @@ class RetryingJevTest {
             "HTTP 429 Too Many Requests (Retry-After 60 s exceeds max-backoff)"));
     }
 
-    @Disabled("pending: step 05-02, startup probe of RetryingJev (DDD-6)")
     @Test
     void the_probe_accepts_a_key_and_a_usable_address_without_calling_jev() {
         assertThat(fixture.retrying(3).probe()).isInstanceOf(ProbeResult.Ok.class);
         fixture.jev.verify();
     }
 
-    @Disabled("pending: step 05-02, startup probe of RetryingJev (DDD-6)")
     @Test
     void the_probe_refuses_a_blank_key() {
         assertThat(new JevAdapterFixture(" ", JevAdapterFixture.BASE_URL).retrying(3).probe())
@@ -140,7 +137,6 @@ class RetryingJevTest {
                 refused -> assertThat(refused.reason()).isEqualTo(ProbeResult.Reason.NO_API_KEY));
     }
 
-    @Disabled("pending: step 05-02, startup probe of RetryingJev (DDD-6)")
     @ParameterizedTest
     @ValueSource(strings = {"not a url", "ftp://jev.test", "http://", "/api/alpha"})
     void the_probe_refuses_an_unusable_address(String address) {
@@ -149,7 +145,6 @@ class RetryingJevTest {
                 refused -> assertThat(refused.reason()).isEqualTo(ProbeResult.Reason.JEV_BASE_URL_INVALID));
     }
 
-    @Disabled("pending: step 05-02, startup probe of RetryingJev (DDD-6)")
     @Test
     void the_key_is_checked_before_the_address() {
         assertThat(new JevAdapterFixture(" ", "not a url").retrying(3).probe())

@@ -32,7 +32,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
       | with an output folder reached through a shortcut into the input               | Output folder <output> is the same as or inside input folder <input>: choose an output outside the input  |
       | with an output folder that climbs into the input through a missing folder     | Output folder <output> is the same as or inside input folder <input>: choose an output outside the input  |
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
   Scenario Outline: An input folder without images is refused
     Given a folder that holds <content>
     When Petra runs the batch inspection
@@ -46,7 +46,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
       | nothing at all |
       | only notes     |
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
   Scenario Outline: A missing API key is refused before any cost
     Given a labelled folder with the images good/000.png
     And the API key is <key>
@@ -78,7 +78,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
       | is a file         | not a folder      |
       | lies below a file | not a folder      |
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
   Scenario Outline: An unusable pass threshold is refused
     Given an input folder with the images good/000.png
     When Petra runs the batch inspection with the pass threshold setting <setting>
@@ -93,7 +93,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
       | -0.1    |
       | abc     |
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
   Scenario Outline: An unusable Jev address is refused before any cost
     Given an input folder with the images good/000.png
     And the Jev address is "<address>"
@@ -107,7 +107,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
       | not a url      |
       | ftp://jev.test |
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:bounded-change
   Scenario: An unexpected failure gives one line and leaves the details in the log
     Given an input folder with the images good/000.png
     And Jev judges good/000.png GOOD with P(GOOD) 0.91

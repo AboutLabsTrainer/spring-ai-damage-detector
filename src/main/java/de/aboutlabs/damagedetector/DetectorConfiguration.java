@@ -1,10 +1,11 @@
 package de.aboutlabs.damagedetector;
 
 import de.aboutlabs.damagedetector.domain.Jev;
-import de.aboutlabs.damagedetector.domain.PassPolicy;
+import de.aboutlabs.damagedetector.cli.PassThreshold;
 import de.aboutlabs.damagedetector.jev.OpenRouterJev;
 import de.aboutlabs.damagedetector.jev.RetryingJev;
 import de.aboutlabs.damagedetector.jev.Sleeper;
+import de.aboutlabs.damagedetector.probe.Probe;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
@@ -16,8 +17,14 @@ import org.springframework.web.client.RestClient;
 class DetectorConfiguration {
 
     @Bean
-    PassPolicy passPolicy(DetectorProperties properties) {
-        return new PassPolicy(properties.passThreshold());
+    PassThreshold passThreshold(DetectorProperties properties) {
+        return PassThreshold.of(properties.passThreshold());
+    }
+
+    /** The Jev-side startup check, handed to the command as a plain probe so that cli never sees jev. */
+    @Bean
+    Probe jevProbe(Jev jev) {
+        return (Probe) jev;
     }
 
     @Bean

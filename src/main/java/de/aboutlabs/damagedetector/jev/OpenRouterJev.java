@@ -3,6 +3,7 @@ package de.aboutlabs.damagedetector.jev;
 import de.aboutlabs.damagedetector.domain.JevJudgement;
 import de.aboutlabs.damagedetector.probe.ProbeResult;
 import java.net.SocketTimeoutException;
+import java.net.URI;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
@@ -71,10 +72,26 @@ public class OpenRouterJev implements AttemptSource {
         }
     }
 
-    // SCAFFOLD: true -- step 05-02
+    /** Key first, then address; reads only the settings, never calls Jev. The address is not echoed (it may carry credentials). */
     @Override
     public ProbeResult probe() {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        if (apiKey == null || apiKey.isBlank()) {
+            return new ProbeResult.Refused(ProbeResult.Reason.NO_API_KEY, List.of());
+        }
+        if (!isHttpAddress(baseUrl)) {
+            return new ProbeResult.Refused(ProbeResult.Reason.JEV_BASE_URL_INVALID, List.of());
+        }
+        return new ProbeResult.Ok();
+    }
+
+    private static boolean isHttpAddress(String address) {
+        try {
+            URI uri = URI.create(address == null ? "" : address);
+            boolean httpScheme = "http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme());
+            return httpScheme && uri.getHost() != null;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private synchronized RestClient client() {

@@ -9,11 +9,16 @@ import de.aboutlabs.damagedetector.evaluate.EvaluationWriter;
 import de.aboutlabs.damagedetector.evaluate.LabelledEvaluation;
 import de.aboutlabs.damagedetector.inspection.ImageFolder;
 import de.aboutlabs.damagedetector.inspection.OutputFolder;
+import de.aboutlabs.damagedetector.probe.Probe;
 import de.aboutlabs.damagedetector.probe.ProbeResult;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.ExitCodeGenerator;
@@ -27,27 +32,59 @@ import org.springframework.stereotype.Component;
 @Component
 class DetectorCommand implements ApplicationRunner, ExitCodeGenerator {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DetectorCommand.class);
     private static final int COMPLETED = 0;
 
     private final BatchInspection batchInspection;
     private final LabelledEvaluation labelledEvaluation;
-    private final PassPolicy passPolicy;
+    private final PassThreshold passThreshold;
+    private final Probe jevProbe;
     private final ErrorFeedback errorFeedback = new ErrorFeedback();
     private int exitCode = COMPLETED;
 
-    DetectorCommand(BatchInspection batchInspection, LabelledEvaluation labelledEvaluation, PassPolicy passPolicy) {
+    DetectorCommand(BatchInspection batchInspection, LabelledEvaluation labelledEvaluation, PassThreshold passThreshold,
+                    @Qualifier("jevProbe") Probe jevProbe) {
         this.batchInspection = batchInspection;
         this.labelledEvaluation = labelledEvaluation;
-        this.passPolicy = passPolicy;
+        this.passThreshold = passThreshold;
+        this.jevProbe = jevProbe;
     }
 
+    /** Bootstrap step 6: the probes run in the order threshold, input, key, address; any failure after the start is one line. */
     @Override
     public void run(ApplicationArguments args) {
-        CliArguments arguments = CliArguments.of(args.getSourceArgs());
-        ImageFolder images = ImageFolder.rootedAt(Path.of(arguments.input()));
+        try {
+            CliArguments arguments = CliArguments.of(args.getSourceArgs());
+            ImageFolder images = ImageFolder.rootedAt(Path.of(arguments.input()));
+            Optional<ProbeResult.Refused> refusal = firstRefusal(arguments, images);
+            if (refusal.isPresent()) {
+                report(errorFeedback.feedbackFor(refusal.get()));
+                return;
+            }
+            start(arguments, images);
+        } catch (RuntimeException failure) {
+            LOG.error("Inspection failed", failure);
+            report(errorFeedback.feedbackFor(failure));
+        }
+    }
+
+    /** Evaluation has its own no-labelled-images refusal, so only a batch run needs the input to hold an image. */
+    private Optional<ProbeResult.Refused> firstRefusal(CliArguments arguments, ImageFolder images) {
+        Stream<Probe> probes = arguments.evaluate()
+            ? Stream.of(passThreshold, jevProbe)
+            : Stream.of(passThreshold, images, jevProbe);
+        return probes
+            .map(Probe::probe)
+            .filter(ProbeResult.Refused.class::isInstance)
+            .map(ProbeResult.Refused.class::cast)
+            .findFirst();
+    }
+
+    private void start(CliArguments arguments, ImageFolder images) {
         OutputFolder output = OutputFolder.rootedAt(Path.of(arguments.output()));
+        PassPolicy passPolicy = passThreshold.policy();
         if (arguments.evaluate()) {
-            evaluate(images, output, arguments);
+            evaluate(images, output, arguments, passPolicy);
             return;
         }
         BatchReport report = batchInspection.run(images, output, passPolicy);
@@ -62,7 +99,7 @@ class DetectorCommand implements ApplicationRunner, ExitCodeGenerator {
         return exitCode;
     }
 
-    private void evaluate(ImageFolder images, OutputFolder output, CliArguments arguments) {
+    private void evaluate(ImageFolder images, OutputFolder output, CliArguments arguments, PassPolicy passPolicy) {
         Optional<Evaluation> evaluation = labelledEvaluation.run(images, output, passPolicy);
         if (evaluation.isEmpty()) {
             report(errorFeedback.feedbackFor(

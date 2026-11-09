@@ -1,4 +1,3 @@
-// SCAFFOLD: true
 package de.aboutlabs.damagedetector.jev;
 
 import de.aboutlabs.damagedetector.domain.JevJudgement;
