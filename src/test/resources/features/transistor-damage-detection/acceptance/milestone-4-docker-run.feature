@@ -20,12 +20,12 @@ Feature: Run the inspection and the evaluation from Docker
     When Jonas runs the evaluation in Docker
     Then the usual evaluation appears on his machine
 
-  @pending @container @US-04 @real-io @error @kpi-K4 @contract-shape:unbounded-preservation
+  @container @US-04 @real-io @error @kpi-K4 @contract-shape:unbounded-preservation
   Scenario: The shared Docker image carries no API key
     When Jonas checks the Docker image he wants to share
     Then neither its configuration, its history nor its files hold an API key or a key file
 
-  @pending @container @US-04 @real-io @error @contract-shape:unbounded-preservation
+  @container @US-04 @real-io @error @contract-shape:unbounded-preservation
   Scenario: Checking the image leaves Jonas's own key file alone
     When Jonas checks the Docker image he wants to share
     Then his own key file is unchanged afterwards

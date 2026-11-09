@@ -48,6 +48,44 @@ threshold that is not a number from 0 to 1, a folder without PNG/JPEG images, a 
 address that is not an http or https address. Any unexpected failure gives one line `Inspection failed: <cause>. See log for
 details.` and exit 1; the details are in `damage-detector.log` in the output folder.
 
+## Run with Docker
+
+Docker is the only requirement on the demo host: no JDK, no Maven. The image holds no API key. The key comes from your
+`.env` (plain `OPENROUTER_API_KEY=value`, no `export`, no quotes) at run time.
+
+```sh
+# Build
+SHA=$(git rev-parse --short=12 HEAD)
+[ -z "$(git status --porcelain)" ] || SHA="$SHA-dirty"
+docker build --build-arg GIT_SHA="$SHA" -t damage-detector:0.1.0 -t "damage-detector:0.1.0-$SHA" .
+
+# Host-side guard: the container cannot see that ./out lies inside ./images
+outside() { case "$(realpath -m "$2")/" in "$(realpath "$1")"/*)
+  echo "Refused: $2 is the same as or inside $1" >&2; return 1;; esac; }
+
+# Batch inspection
+outside images out && mkdir -p out &&
+docker run --rm --user "$(id -u):$(id -g)" --env-file .env \
+  -v "$PWD/images:/in:ro" -v "$PWD/out:/out" \
+  damage-detector:0.1.0 --input=/in --output=/out
+echo "exit code: $?"
+
+# Evaluation
+outside images out && mkdir -p out &&
+docker run --rm --user "$(id -u):$(id -g)" --env-file .env \
+  -v "$PWD/images:/in:ro" -v "$PWD/out:/out" \
+  damage-detector:0.1.0 --evaluate --input=/in --output=/out/eval
+echo "exit code: $?"   # 2 = false pass at the configured threshold
+```
+
+`mkdir -p out` matters: if Docker creates `out` itself it is owned by root and the run is refused. `--user` lets you
+delete the results without sudo. Use a fresh output folder per run. The exit codes are the table below, passed on
+unchanged; 125 to 127 mean Docker itself failed. Keep the project on the WSL filesystem, not below `/mnt/c`.
+
+`scripts/container-check.sh --self-test` proves that the image scan catches a key on deliberately bad images.
+`scripts/container-check.sh image-scan` builds the image from a scratch copy with a planted key and scans it. It needs
+Docker and stays out of `./mvnw verify`. It never writes your `.env`.
+
 ## Exit codes
 
 | Code | Meaning |

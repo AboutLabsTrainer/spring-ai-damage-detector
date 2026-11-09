@@ -52,4 +52,7 @@ The scenario gate is `scripts/container-check.sh`, not `./mvnw verify` (Q4).
 Same day: run the documented command on a machine or user account without JDK/Maven.
 
 ## Evidence (fill after the run)
-- Summary line: _pending_
+- Summary line: `Inspected 5 images: 1 PASS, 2 SCRAP, 2 REVIEW (REVIEW share 40.0 %; 0 Jev errors in REVIEW), Jev cost $0.00074 -> /out/report.md`
+- Date: 2026-11-09. Cost: $0.00074. Command: the documented batch command (`--user "$(id -u):$(id -g)" --env-file .env`, `/in` read-only, `/out` mounted below `out/`), exit code 0, on 5 real images copied from `images/` (good/000-002, cut_lead/000, bent_lead/000), image `damage-detector:0.1.0` built with Docker only. Output files belong to the host user; the key was never printed.
+- Ctrl-C check under `docker run` (SIGINT to the client after 6 s, 40 images): `exit code: 130`, no `report.md`, empty `docker ps`.
+- Half A gates: `scripts/container-check.sh --self-test` reports PASS for each detection route (configuration, history, deleted-layer `.env`, key in a layer file, key inside the jar) and for a clean control image. `image-scan` passes on the shared image, and fails (jar-env-file, jar-key) when `.dockerignore` is emptied. The real `.env` hash was identical before and after every run. Base image digests re-checked 2026-11-09: still the newest 21 JRE and JDK noble tags.
