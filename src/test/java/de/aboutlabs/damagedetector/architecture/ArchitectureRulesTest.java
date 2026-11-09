@@ -22,7 +22,6 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
 import com.tngtech.archunit.library.Architectures.LayeredArchitecture;
-import de.aboutlabs.damagedetector.DetectorProperties;
 import de.aboutlabs.damagedetector.domain.Jev;
 import de.aboutlabs.damagedetector.domain.Label;
 import de.aboutlabs.damagedetector.inspection.ImageFolder;
@@ -41,14 +40,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Set;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /** DDD-17 / brief.md "Enforcement": the eight architecture rules over the production classes. Every active rule blocks the build. */
 class ArchitectureRulesTest {
-
-    private static final String PENDING_04_01 =
-        "pending: step 04-01, OpenRouterJev still implements Jev and imports DetectorProperties (DDD-17 rule 5, ADR-004)";
 
     private static final String ROOT = "de.aboutlabs.damagedetector";
     private static final String DOMAIN = ROOT + ".domain..";
@@ -101,7 +96,6 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @Disabled(PENDING_04_01)
     void rule_5_only_the_configuration_constructs_the_open_router_adapter() {
         noClasses().that(not(partOf(DETECTOR_CONFIGURATION)))
             .should().accessTargetWhere(constructorOf(OpenRouterJev.class))
@@ -109,7 +103,6 @@ class ArchitectureRulesTest {
     }
 
     @Test
-    @Disabled(PENDING_04_01)
     void rule_5_retrying_jev_is_the_only_jev() {
         classes().that().implement(Jev.class)
             .should(beNamed(RETRYING_JEV))
@@ -154,12 +147,10 @@ class ArchitectureRulesTest {
     @Test
     void rule_8_dependencies_follow_the_allowed_edges() {
         allowedEdges()
-            .ignoreDependency(OpenRouterJev.class, DetectorProperties.Jev.class)
             .check(PRODUCTION);
     }
 
     @Test
-    @Disabled(PENDING_04_01)
     void rule_8_jev_does_not_depend_on_the_root() {
         allowedEdges().check(PRODUCTION);
     }

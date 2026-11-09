@@ -23,7 +23,6 @@ import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -33,7 +32,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
 /** DELIVER enables these with slice 03; PIT counts them, it does not count Cucumber (DEVOPS, Mutation testing strategy). */
-@Disabled("pending: slice 03, OpenRouterJev single attempt and failure classification (ADR-004, DDD-26)")
 class OpenRouterJevAdapterTest {
 
     private final JevAdapterFixture fixture = new JevAdapterFixture();
@@ -180,6 +178,9 @@ class OpenRouterJevAdapterTest {
                 .andRespond(withSuccess(new String(golden.readAllBytes(), StandardCharsets.UTF_8), MediaType.APPLICATION_JSON));
         }
 
-        assertThat(fixture.retrying(1).judge(IMAGE, "image/png")).isInstanceOf(JevOutcome.Judged.class);
+        assertThat(fixture.retrying(1).judge(IMAGE, "image/png")).isInstanceOfSatisfying(JevOutcome.Judged.class, judged -> {
+            assertThat(judged.judgement().choice()).isEqualTo("GOOD");
+            assertThat(judged.judgement().probabilityOfGood()).isEqualTo(0.88);
+        });
     }
 }

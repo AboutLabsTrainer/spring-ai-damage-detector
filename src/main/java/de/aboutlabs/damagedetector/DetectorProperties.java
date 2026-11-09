@@ -16,11 +16,19 @@ public record DetectorProperties(@DefaultValue("0.87") double passThreshold, @De
         @DefaultValue("typesafe/jev-1.13") String model,
         String apiKey,
         @DefaultValue("10s") Duration connectTimeout,
-        @DefaultValue("30s") Duration readTimeout) {
+        @DefaultValue("30s") Duration readTimeout,
+        @DefaultValue Retry retry) {
 
         @Override
         public String toString() {
             return "Jev[baseUrl=" + baseUrl + ", model=" + model + ", apiKey=***]";
         }
+    }
+
+    /** Retry policy of one Jev call: attempts per image and the wait between them, which doubles up to the maximum. */
+    public record Retry(
+        @DefaultValue("3") int maxAttempts,
+        @DefaultValue("1s") Duration initialBackoff,
+        @DefaultValue("10s") Duration maxBackoff) {
     }
 }

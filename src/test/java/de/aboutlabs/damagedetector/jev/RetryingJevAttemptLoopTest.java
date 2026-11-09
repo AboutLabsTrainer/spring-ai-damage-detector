@@ -26,7 +26,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.client.response.DefaultResponseCreator;
 
 /** Every reply script up to three long, for every limit up to four, against a small model of the attempt loop. */
-@Disabled("pending: slice 03, RetryingJev (ADR-004)")
 class RetryingJevAttemptLoopTest {
 
     enum Reply { ANSWERS, TRANSIENT, PERMANENT }
@@ -54,17 +53,18 @@ class RetryingJevAttemptLoopTest {
     void the_attempt_loop_stops_at_the_first_answer_the_first_final_failure_or_the_limit(List<Reply> script, int maxAttempts) {
         int expectedAttempts = attemptsOf(script, maxAttempts);
         JevAdapterFixture fixture = new JevAdapterFixture();
-        script.stream().limit(expectedAttempts).forEach(reply -> respond(fixture, reply));
+        IntStream.range(0, expectedAttempts).forEach(attempt -> respond(fixture, replyAt(script, attempt)));
 
         JevOutcome outcome = fixture.retrying(maxAttempts).judge(IMAGE, "image/png");
 
         fixture.jev.verify();
-        Reply last = script.get(expectedAttempts - 1);
+        Reply last = replyAt(script, expectedAttempts - 1);
         assertThat(outcome instanceof JevOutcome.Judged).isEqualTo(last == Reply.ANSWERS);
         int attempts = outcome instanceof JevOutcome.Judged judged ? judged.attempts() : ((JevOutcome.Failed) outcome).attempts();
         assertThat(attempts).isEqualTo(expectedAttempts);
     }
 
+    @Disabled("pending: step 04-02, backoff schedule (ADR-004, DDD-5)")
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 5, 8})
     void every_retry_is_preceded_by_one_wait_that_never_shrinks_or_exceeds_the_cap(int maxAttempts) {
@@ -77,14 +77,18 @@ class RetryingJevAttemptLoopTest {
             wait -> assertThat(wait).isLessThanOrEqualTo(MAX_BACKOFF).isGreaterThan(Duration.ZERO));
     }
 
+    /** A script that runs out carries on with transient failures, so the loop only ever stops at an answer, a permanent failure or the limit. */
+    private static Reply replyAt(List<Reply> script, int attempt) {
+        return attempt < script.size() ? script.get(attempt) : Reply.TRANSIENT;
+    }
+
     private static int attemptsOf(List<Reply> script, int maxAttempts) {
-        int limit = Math.min(script.size(), maxAttempts);
-        for (int attempt = 0; attempt < limit; attempt++) {
-            if (script.get(attempt) != Reply.TRANSIENT) {
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            if (replyAt(script, attempt) != Reply.TRANSIENT) {
                 return attempt + 1;
             }
         }
-        return limit;
+        return maxAttempts;
     }
 
     private static void respond(JevAdapterFixture fixture, Reply reply) {

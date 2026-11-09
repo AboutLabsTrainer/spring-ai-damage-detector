@@ -14,7 +14,7 @@ Feature: The batch finishes even when Jev fails for some images
 
   Rule: A failed image goes to REVIEW and the batch goes on
 
-    @pending @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario: Batch completes and counts a failed image
       Given an input folder with the images good/000.png, good/042.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -27,7 +27,7 @@ Feature: The batch finishes even when Jev fails for some images
       And the run ends successfully
       And the output folder holds only what a completed batch declares
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: A brief Jev outage does not change the verdict
       Given an input folder with the images bent_lead/003.png
       And Jev fails once with "503 Service Unavailable" and then judges bent_lead/003.png BENT_LEAD
@@ -35,7 +35,7 @@ Feature: The batch finishes even when Jev fails for some images
       Then the inspection report counts 0 PASS, 1 SCRAP, 0 REVIEW and 0 Jev errors
       And Jev was asked about bent_lead/003.png exactly 2 times
 
-    @pending @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario Outline: A failure that may pass goes away is retried, then the image goes to REVIEW
       Given an input folder with the images good/000.png
       And Jev fails with "<failure>" on every attempt for good/000.png
@@ -52,7 +52,7 @@ Feature: The batch finishes even when Jev fails for some images
         | 503 Service Unavailable   |
         | 504 Gateway Timeout       |
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario Outline: A failure that cannot go away is not retried
       Given an input folder with the images good/000.png
       And Jev fails with "<failure>" on every attempt for good/000.png
@@ -68,7 +68,7 @@ Feature: The batch finishes even when Jev fails for some images
         | 403 Forbidden    |
         | 404 Not Found    |
 
-    @pending @US-03 @driving_port @real-io @error @adapter-integration @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @adapter-integration @contract-shape:bounded-change
     Scenario: An image Jev does not answer in time goes to REVIEW and the batch goes on
       Given an input folder with the images good/042.png and good/043.png
       And Jev gets 1 s to answer
@@ -78,7 +78,7 @@ Feature: The batch finishes even when Jev fails for some images
       Then good/042.png is documented as REVIEW with the description "Jev call failed after 3 attempts: timeout after 1 s"
       And the inspection report counts 1 PASS, 0 SCRAP, 1 REVIEW and 1 Jev error
 
-    @pending @US-03 @driving_port @real-io @error @adapter-integration @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @adapter-integration @contract-shape:bounded-change
     Scenario: An image whose connection breaks goes to REVIEW
       Given an input folder with the images good/000.png
       And the connection to Jev breaks on every attempt for good/000.png
@@ -86,7 +86,7 @@ Feature: The batch finishes even when Jev fails for some images
       Then good/000.png is documented as REVIEW with a description starting "Jev call failed after 3 attempts: "
       And Jev was asked about good/000.png exactly 3 times
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario Outline: An answer that cannot be trusted never becomes a verdict
       Given an input folder with the images good/000.png
       And Jev answers good/000.png with <answer> on every attempt
@@ -108,7 +108,7 @@ Feature: The batch finishes even when Jev fails for some images
         | a garbled reply                |
         | an empty reply                 |
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: A garbled answer followed by a good one gives the normal verdict
       Given an input folder with the images bent_lead/000.png
       And Jev answers bent_lead/000.png with a garbled reply once and then judges it BENT_LEAD
@@ -130,18 +130,18 @@ Feature: The batch finishes even when Jev fails for some images
       And Jev judges misplaced/000.png MISPLACED
       And Jev judges damaged_case/000.png DAMAGED_CASE
 
-    @pending @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario: The batch of ten reports every image
       When Petra runs the batch inspection
       Then the inspection report counts 3 PASS, 4 SCRAP, 3 REVIEW and 2 Jev errors
       And the run ends successfully
 
-    @pending @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario: The report says how many images Jev judged
       When Petra runs the batch inspection
       Then 8 of the images were judged by Jev
 
-    @pending @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario: A failed image carries no Jev choice
       When Petra runs the batch inspection
       Then good/004.png is marked as a Jev error without a Jev choice

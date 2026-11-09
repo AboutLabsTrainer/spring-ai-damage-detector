@@ -3,7 +3,6 @@ package de.aboutlabs.damagedetector;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Properties;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.config.YamlPropertiesFactoryBean;
 import org.springframework.core.io.ClassPathResource;
@@ -16,7 +15,6 @@ class ApplicationDefaultsContractTest {
 
     private final Properties defaults = defaults();
 
-    @Disabled("pending: slice 03, application.yml retry and time-limit defaults (ADR-004, UC-4)")
     @Test
     void the_jev_time_limits_and_the_retry_defaults_are_the_agreed_ones() {
         assertThat(defaults)

@@ -17,7 +17,7 @@ public class Inspector {
     }
 
     public Inspection inspect(ImageFolder images, String image, PassPolicy policy) {
-        JevOutcome outcome = new JevOutcome.Judged(jev.judge(images.bytesOf(image), ImageFolder.mediaTypeOf(image)));
+        JevOutcome outcome = jev.judge(images.bytesOf(image), ImageFolder.mediaTypeOf(image));
         return Inspection.of(image, outcome, policy);
     }
 }

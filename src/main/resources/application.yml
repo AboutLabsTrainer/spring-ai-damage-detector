@@ -18,3 +18,7 @@ detector:
     api-key: ${OPENROUTER_API_KEY:}
     connect-timeout: 10s
     read-timeout: 30s
+    retry:
+      max-attempts: 3
+      initial-backoff: 1s
+      max-backoff: 10s
