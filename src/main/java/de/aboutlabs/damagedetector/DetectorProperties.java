@@ -5,11 +5,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.context.properties.bind.DefaultValue;
 
 /**
- * @param passThreshold minimum P(GOOD) for an automatic PASS; 0.86 was fitted on the spike sample and is optimistic
+ * @param passThreshold minimum P(GOOD) for an automatic PASS; 0.87 is one step of margin over the lowest safe value 0.86 found on the 253-image sweep
  * @param jev           connection to Jev via the OpenRouter Decisions API
  */
 @ConfigurationProperties("detector")
-public record DetectorProperties(@DefaultValue("0.86") double passThreshold, @DefaultValue Jev jev) {
+public record DetectorProperties(@DefaultValue("0.87") double passThreshold, @DefaultValue Jev jev) {
 
     public record Jev(
         @DefaultValue("https://openrouter.ai") String baseUrl,

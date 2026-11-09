@@ -20,7 +20,7 @@ class ApplicationDefaultsContractTest {
     @Test
     void the_jev_time_limits_and_the_retry_defaults_are_the_agreed_ones() {
         assertThat(defaults)
-            .containsEntry("detector.pass-threshold", 0.86)
+            .containsEntry("detector.pass-threshold", 0.87)
             .containsEntry("detector.jev.connect-timeout", "10s")
             .containsEntry("detector.jev.read-timeout", "30s")
             .containsEntry("detector.jev.retry.max-attempts", 3)

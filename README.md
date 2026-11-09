@@ -2,7 +2,7 @@
 
 A Spring Boot command-line tool that checks top-view photos of through-hole transistors for defects. Each image goes to
 the Jev decision model through the OpenRouter Decisions API. The tool lets a part pass only when Jev answers GOOD with
-P(GOOD) at or above the pass threshold (default 0.86). Every other image is flagged for scrap or review.
+P(GOOD) at or above the pass threshold (default 0.87: one step of margin over 0.86, the lowest threshold with 0 false passes on the real 253-image sweep, because Jev varies from run to run). Every other image is flagged for scrap or review.
 
 ## Requirements
 

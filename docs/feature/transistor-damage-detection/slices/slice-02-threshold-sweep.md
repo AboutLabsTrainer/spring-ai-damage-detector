@@ -58,4 +58,4 @@ Same day: Jonas reads the sweep from the slice-01 run and sets `detector.pass-th
 
 - Lowest threshold with 0 false passes: 0.86 (the configured default); 0.85 still lets 1 defect through.
 - Note: the defect images were in the SPIKE sample, so the defect side shows reproducibility, not held-out validation (D26, Q8).
-- Threshold decision: pending user (orchestrator asks)
+- Threshold decision (user, 2026-11-09): default raised to 0.87 — one step of margin over the lowest safe value 0.86 (Jev varies run to run); costs good auto-pass 81/213 (38 %) vs 96/213 (45 %) on this run.

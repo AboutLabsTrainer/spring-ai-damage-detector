@@ -11,7 +11,7 @@ logging:
     console: ${debug:off}
 
 detector:
-  pass-threshold: 0.86
+  pass-threshold: 0.87
   jev:
     base-url: https://openrouter.ai
     model: typesafe/jev-1.13

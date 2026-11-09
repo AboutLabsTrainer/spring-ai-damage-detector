@@ -100,4 +100,4 @@ Feature: Pick a pass threshold that lets no defect through
     And Jonas has an earlier evaluation of that folder
     When Jonas runs the batch inspection
     Then the evaluation says the lowest threshold with 0 false passes is 0.88
-    And the inspection report states the pass threshold 0.86
+    And the inspection report states the pass threshold 0.87
