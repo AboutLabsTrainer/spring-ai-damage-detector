@@ -25,18 +25,23 @@ public final class DetectorLauncher {
     @SafeVarargs
     public static int launch(String[] args, ApplicationContextInitializer<ConfigurableApplicationContext>... capabilities) {
         ErrorFeedback errorFeedback = new ErrorFeedback();
+        SpringApplication application;
         try {
             Optional<ProbeResult.Refused> refusal = refusalBeforeStart(args);
             if (refusal.isPresent()) {
                 return print(errorFeedback.feedbackFor(refusal.get()));
             }
             OutputFolder output = OutputFolder.rootedAt(Path.of(CliArguments.of(args).output()));
-            SpringApplication application = new SpringApplication(DamageDetectorApplication.class);
+            application = new SpringApplication(DamageDetectorApplication.class);
             application.setDefaultProperties(LogSink.defaultPropertiesFor(output.realRoot()));
             application.addInitializers(capabilities);
-            return SpringApplication.exit(application.run(args));
         } catch (RuntimeException failure) {
             return print(errorFeedback.feedbackBeforeLog(failure));
+        }
+        try {
+            return SpringApplication.exit(application.run(args));
+        } catch (RuntimeException failure) {
+            return print(errorFeedback.feedbackFor(failure));
         }
     }
 
