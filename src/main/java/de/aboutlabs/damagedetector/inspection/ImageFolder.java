@@ -48,6 +48,46 @@ public final class ImageFolder implements Probe {
         return lowerCase(relativePath).endsWith(".png") ? "image/png" : "image/jpeg";
     }
 
+    /**
+     * Bootstrap step 2: reads metadata only. The output's nearest existing ancestor is resolved to its real path, the
+     * missing segments are appended and the result normalized, so shortcuts and {@code ..} across missing folders count.
+     */
+    public ProbeResult checkRun(Path output) {
+        if (!Files.isDirectory(root)) {
+            return new ProbeResult.Refused(ProbeResult.Reason.INPUT_MISSING, List.of(root.toString()));
+        }
+        if (isSameOrInside(realPathOf(output), realPathOf(root), output)) {
+            return new ProbeResult.Refused(ProbeResult.Reason.OUTPUT_SAME_AS_OR_INSIDE_INPUT,
+                List.of(output.toString(), root.toString()));
+        }
+        return new ProbeResult.Ok();
+    }
+
+    private boolean isSameOrInside(Path realOutput, Path realInput, Path output) {
+        return realOutput.startsWith(realInput) || sameFile(output);
+    }
+
+    private boolean sameFile(Path output) {
+        try {
+            return Files.exists(output) && Files.isSameFile(output, root);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private static Path realPathOf(Path path) {
+        Path absolute = path.toAbsolutePath();
+        Path existing = absolute;
+        while (!Files.exists(existing)) {
+            existing = existing.getParent();
+        }
+        try {
+            return existing.toRealPath().resolve(existing.relativize(absolute)).normalize();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     @Override
     public ProbeResult probe() {
         if (imagePaths().isEmpty()) {

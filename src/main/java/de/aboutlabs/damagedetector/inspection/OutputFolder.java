@@ -5,9 +5,13 @@ import de.aboutlabs.damagedetector.probe.ProbeResult;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AccessDeniedException;
+import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.FileSystemException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 
 /**
  * The single write port, root-scoped to --output. It rejects paths that escape the root and creates missing parents on
@@ -15,6 +19,8 @@ import java.nio.file.StandardCopyOption;
  */
 public final class OutputFolder implements Probe {
 
+    private static final String NOT_A_FOLDER = "not a folder";
+    private static final String NOT_A_DIRECTORY = "Not a directory";
     private static final String PROBE_FILE = ".damage-detector-write-probe";
 
     private final Path root;
@@ -51,16 +57,30 @@ public final class OutputFolder implements Probe {
         }
     }
 
-    /** Creates the folder, then writes, renames and deletes the probe file, so a filesystem without the rename refuses here. */
+    /**
+     * Creates the folder, then writes, renames and deletes the probe file, so a filesystem without the rename refuses here.
+     * A folder that cannot be used is a refusal, not an exception.
+     */
     @Override
     public ProbeResult probe() {
-        writeString(PROBE_FILE, "");
         try {
+            Files.createDirectories(root);
+            writeString(PROBE_FILE, "");
             Files.delete(root.resolve(PROBE_FILE));
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            return new ProbeResult.Ok();
+        } catch (IOException | UncheckedIOException e) {
+            return new ProbeResult.Refused(ProbeResult.Reason.OUTPUT_NOT_WRITABLE, List.of(root.toString(), causeOf(e)));
         }
-        return new ProbeResult.Ok();
+    }
+
+    private static String causeOf(Exception failure) {
+        Throwable cause = failure instanceof UncheckedIOException unchecked ? unchecked.getCause() : failure;
+        return switch (cause) {
+            case AccessDeniedException denied -> "permission denied";
+            case FileAlreadyExistsException exists -> NOT_A_FOLDER;
+            case FileSystemException system when NOT_A_DIRECTORY.equals(system.getReason()) -> NOT_A_FOLDER;
+            default -> String.valueOf(cause.getMessage());
+        };
     }
 
     /** Only the relative part is checked: the root itself may hold a shortcut, which normalizing would break. */

@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -47,7 +46,6 @@ class OutputFolderTest {
         assertThat(output).isEmptyDirectory();
     }
 
-    @Disabled("pending: slice 05, the probe's refusal (DDD-33, DDD-34)")
     @Test
     void the_probe_refuses_a_read_only_folder() throws IOException {
         assumeNotRoot();
@@ -60,7 +58,6 @@ class OutputFolderTest {
         Files.setPosixFilePermissions(output, PosixFilePermissions.fromString("rwxr-xr-x"));
     }
 
-    @Disabled("pending: slice 05, the probe's leftover file (DDD-29)")
     @Test
     void the_probe_overwrites_a_leftover_probe_file_from_a_killed_run() throws IOException {
         Path output = Files.createDirectory(temp.resolve("out"));

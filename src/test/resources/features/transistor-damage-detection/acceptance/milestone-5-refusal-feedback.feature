@@ -9,7 +9,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
   I want one clear line when a run cannot work
   so that I fix the cause and start again, knowing nothing was charged or judged.
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:unbounded-preservation
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:unbounded-preservation
   Scenario Outline: A mistake on the command line is refused before anything is written
     Given an input folder with the images good/000.png
     When Petra starts the detector <mistake>
@@ -62,7 +62,7 @@ Feature: A run that cannot work is refused at once, with a clear reason
       | blank   | Petra  | batch inspection |
       | missing | Jonas  | evaluation       |
 
-  @pending @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:unbounded-preservation
+  @US-05 @driving_adapter @real-io @error @kpi-K6 @contract-shape:unbounded-preservation
   Scenario Outline: An output folder that cannot be written is refused
     Given an input folder with the images good/000.png
     And the output folder <obstacle>

@@ -7,7 +7,6 @@ import de.aboutlabs.damagedetector.probe.ProbeResult.Reason;
 import de.aboutlabs.damagedetector.probe.ProbeResult.Refused;
 import java.util.List;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -43,14 +42,12 @@ class ErrorFeedbackTest {
                 "Pass threshold must be a number from 0 to 1: set detector.pass-threshold (was abc)"));
     }
 
-    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @ParameterizedTest
     @MethodSource("refusals")
     void every_refusal_gives_its_line_and_exit_1(Reason reason, List<String> details, String line) {
         assertThat(feedback.feedbackFor(new Refused(reason, details))).isEqualTo(new Feedback(line, 1));
     }
 
-    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void every_refusal_reason_has_a_line() {
         for (Reason reason : Reason.values()) {
@@ -60,27 +57,23 @@ class ErrorFeedbackTest {
         }
     }
 
-    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void an_unexpected_exception_points_to_the_log() {
         assertThat(feedback.feedbackFor(new IllegalStateException("disk full")))
             .isEqualTo(new Feedback("Inspection failed: disk full. See log for details.", 1));
     }
 
-    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void an_exception_without_a_message_is_named_by_its_type() {
         assertThat(feedback.feedbackFor(new IllegalStateException()).line()).contains("IllegalStateException");
     }
 
-    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void before_the_log_exists_the_line_does_not_point_to_it() {
         assertThat(feedback.feedbackBeforeLog(new IllegalStateException("disk full")))
             .isEqualTo(new Feedback("Inspection failed: disk full.", 1));
     }
 
-    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @ParameterizedTest
     @ValueSource(strings = {"first\n\tat second", "first\r\nsecond", "first\n"})
     void only_the_first_line_of_a_cause_is_shown(String message) {

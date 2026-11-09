@@ -1,7 +1,7 @@
-// SCAFFOLD: true
 package de.aboutlabs.damagedetector.cli;
 
 import de.aboutlabs.damagedetector.probe.ProbeResult;
+import java.util.List;
 import java.util.Locale;
 
 /** The one pure mapping from a refusal or an exception to one stderr line and an exit code. It prints nothing (ADR-005). */
@@ -16,20 +16,40 @@ public class ErrorFeedback {
     private static final int COMPLETED = 0;
 
     public Feedback feedbackFor(ProbeResult.Refused refusal) {
-        return switch (refusal.reason()) {
-            case NO_LABELLED_IMAGES -> new Feedback("No labelled images below " + refusal.details().getFirst()
-                + ": expected sub-folders good, bent_lead, cut_lead, damaged_case, misplaced", REFUSED);
-            default -> throw new AssertionError("Not yet implemented -- RED scaffold");
+        List<String> details = refusal.details();
+        String line = switch (refusal.reason()) {
+            case USAGE -> "Usage: java -jar damage-detector.jar [--evaluate] --input=<folder> --output=<folder> ("
+                + details.getFirst() + ")";
+            case INPUT_MISSING -> "Input folder does not exist: " + details.getFirst();
+            case NO_IMAGES -> "No PNG/JPEG images below " + details.getFirst();
+            case NO_LABELLED_IMAGES -> "No labelled images below " + details.getFirst()
+                + ": expected sub-folders good, bent_lead, cut_lead, damaged_case, misplaced";
+            case OUTPUT_SAME_AS_OR_INSIDE_INPUT -> "Output folder " + details.get(0) + " is the same as or inside input folder "
+                + details.get(1) + ": choose an output outside the input";
+            case OUTPUT_NOT_WRITABLE -> "Cannot write to output folder " + details.get(0) + ": " + details.get(1);
+            case NO_API_KEY -> "No Jev API key: set the OPENROUTER_API_KEY environment variable";
+            case JEV_BASE_URL_INVALID -> "Jev base URL cannot be used: set detector.jev.base-url to an http or https address";
+            case THRESHOLD_INVALID -> "Pass threshold must be a number from 0 to 1: set detector.pass-threshold (was "
+                + details.getFirst() + ")";
         };
+        return new Feedback(line, REFUSED);
     }
 
     public Feedback feedbackFor(Throwable failure) {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        return new Feedback(feedbackBeforeLog(failure).line() + " See log for details.", REFUSED);
     }
 
     /** Before bootstrap step 5 no log exists, so the line has no "See log" clause. */
     public Feedback feedbackBeforeLog(Throwable failure) {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        return new Feedback("Inspection failed: " + shortCause(failure) + ".", REFUSED);
+    }
+
+    private static String shortCause(Throwable failure) {
+        String message = failure.getMessage();
+        if (message == null || message.isBlank()) {
+            return failure.getClass().getSimpleName();
+        }
+        return message.lines().findFirst().orElseThrow();
     }
 
     /** The exit-2 line (Q7). {@code reportPath} is shown as the user typed the output folder. */
