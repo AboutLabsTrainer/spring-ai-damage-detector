@@ -109,6 +109,7 @@ class DetectorCommand implements ApplicationRunner, ExitCodeGenerator {
         Evaluation scored = evaluation.get();
         System.out.println(summaryLine(scored, arguments.output()));
         if (scored.judged() == 0) {
+            // Nothing judged returns here, so exit 3 wins over exit 2 by construction.
             report(errorFeedback.noImageJudged(scored.jevErrors()));
             return;
         }

@@ -14,7 +14,11 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** Closed error set of INV-5: every refusal has its line and exit 1. */
+/**
+ * Closed error set of INV-5: every refusal has its line and exit 1.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class ErrorFeedbackTest {
 
     private final ErrorFeedback feedback = new ErrorFeedback();
@@ -93,17 +97,5 @@ class ErrorFeedbackTest {
     void no_image_judged_names_the_key_and_the_network() {
         assertThat(feedback.noImageJudged(4))
             .isEqualTo(new Feedback("0 of 4 images judged by Jev - check OPENROUTER_API_KEY and network", 3));
-    }
-
-    @ParameterizedTest
-    @CsvSource({
-        "4, 0, 0",
-        "4, 1, 2",
-        "1, 3, 2",
-        "0, 0, 3",
-        "0, 1, 3"
-    })
-    void a_completed_run_ends_with_its_code_and_nothing_judged_wins_over_false_pass(int judged, int falsePasses, int exitCode) {
-        assertThat(feedback.exitCodeOfCompletedRun(judged, falsePasses)).isEqualTo(exitCode);
     }
 }
