@@ -28,6 +28,12 @@ secondary_persona:
   status: illustrative (E6)
   source: [E6]
 
+showcase_persona:   # added 2026-11-06 in DISCUSS; docs/product/personas/showcase-presenter.yaml
+  id: P3
+  name: Showcase presenter
+  status: illustrative (E6)
+  source: [E6]
+
 opportunity_statement: >
   Minimize the time QS spends, and the chance of a missed or wrongly categorized defect,
   when deciding whether a placed transistor passes and documenting each scrap case
@@ -67,3 +73,132 @@ jobs:
 validation_needed:
   - Mom Test with 1-3 QS people (last defect found, what was recorded, what happened to the record)
   - Feasibility SPIKE (vision LLM -> structured description -> Jev choice; false-pass rate, recall per class)
+
+# ---------------------------------------------------------------------------
+# DISCUSS refinement 2026-10-30 (feature transistor-damage-detection).
+# Everything above is the DISCOVER seed and is kept as history. The only later
+# addition is the showcase_persona block (P3).
+# The seed's vision-LLM step and "cheapest Claude model" (E7) are superseded:
+# SPIKE promoted variant A (Jev judges the image directly) and DISCUSS removed Qwen.
+# Personas: docs/product/personas/qs-inspector.yaml (P1), showcase-presenter.yaml (P3).
+# Jobs SSOT: docs/product/jobs.yaml (J1, J2, J3). Numbers in mockups marked (illustrative)
+# are examples of format, not measurements.
+# ---------------------------------------------------------------------------
+discuss_refinement:
+  schema_version: 1
+  jobs_ref: [J1, J2, J3]
+  emotional_arc:
+    start: "Sceptical - is 0.86 safe, will the batch survive a glitch?"
+    middle: "Focused - numbers and records appear, nothing silently lost"
+    end: "Confident - zero false passes shown on all labelled images; every non-pass has image + reason"
+    branches:
+      false_pass: "Alarmed at exit 2, then back in control - the report names each false pass, and the sweep shows the threshold that removes it (step 2)"
+      refused_run: "Briefly annoyed, then relieved - one line names the cause and nothing was charged"
+
+  out_of_scope:
+    - "Hand-off of records to P2 (reporting, line feedback): the journey ends at the report and the scrap/ and review/ copies; the seed's Conclude step stays unserved in this feature"
+
+  steps:
+    - id: 1
+      name: Evaluate the pass rule on labelled images
+      job: J2
+      persona: P3
+      command: "java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --evaluate --input=images --output=out/eval"
+      tui_mockup: |
+        Evaluated ${labelled_count} labelled images at pass threshold ${pass_threshold}:
+        ${false_passes} false passes, good auto-pass ${good_passed}/${good_count} (${good_pass_rate} %),
+        defects not passed ${defects_caught}/${defect_count}, Jev cost $${total_cost} -> out/eval/evaluation.md
+        e.g. (illustrative) "Evaluated 253 labelled images at pass threshold 0.86: 0 false passes,
+        good auto-pass 110/213 (51.6 %), defects not passed 40/40, Jev cost $0.03795 -> out/eval/evaluation.md"
+      shared_artifacts: [pass_threshold, class_labels, verdict_rule, total_cost]
+      emotional_state: {entry: sceptical, exit: "informed - knows the real false-pass count"}
+      integration_checkpoint: "No request to Jev contains an image's file name, relative path, a folder label with a path separator, or the input folder name; apart from the image data every request is identical (C11, UC-3). Labels only score."
+      failure_modes:
+        - "Input has no good/ or defect sub-folders -> clear message naming the expected folders, exit 1"
+        - "A defect gets P(GOOD) >= threshold on this run -> listed as false pass, one stderr line, exit 2"
+        - "Jev call fails -> retried, then counted as not passed (after slice 03)"
+      gherkin: |
+        Scenario: Presenter sees that no defect passes on the labelled set
+          Given the labelled folder "images" with 213 good and 40 defect images
+          When Jonas runs the evaluation with pass threshold 0.86
+          Then the evaluation report states the number of false passes and lists each one by image
+          And it states the good auto-pass rate and the recall per defect class
+
+    - id: 2
+      name: Choose the pass threshold from the sweep
+      job: J2
+      persona: P3
+      command: "open out/eval/evaluation.md ; java -jar ... --detector.pass-threshold=<t> --input=... --output=..."
+      tui_mockup: |
+        | Threshold | False passes | Good auto-pass |
+        | 0.84      | 1            | 131/213        |   (illustrative)
+        | 0.86      | 0            | 110/213        |
+        Lowest threshold with 0 false passes: ${safe_threshold}
+      shared_artifacts: [pass_threshold, safe_threshold]
+      emotional_state: {entry: informed, exit: "decided - threshold backed by evidence"}
+      integration_checkpoint: "The sweep row for the configured threshold equals the headline numbers."
+      failure_modes: ["No threshold reaches 0 false passes -> report says so; every GOOD routes to REVIEW is the only safe rule"]
+
+    - id: 3
+      name: Inspect a production batch
+      job: J1
+      persona: P1
+      command: "java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --input=<folder> --output=<folder>"
+      tui_mockup: |
+        Inspected ${total} images: ${pass} PASS, ${scrap} SCRAP, ${review} REVIEW
+        (REVIEW share ${review_share} %; ${jev_errors} Jev errors in REVIEW), Jev cost $${total_cost} -> ${output}/report.md
+      shared_artifacts: [verdict_rule, pass_threshold, jev_errors, total_cost]
+      emotional_state: {entry: "routine, slightly anxious about glitches", exit: "relieved - batch finished"}
+      integration_checkpoint: "PASS + SCRAP + REVIEW = total; jev_errors <= REVIEW; an error is never PASS."
+      failure_modes:
+        - "Jev times out or returns 5xx/429 -> retried with backoff, then REVIEW with the error text"
+        - "429 with Retry-After above the longest allowed wait -> gives up at once, REVIEW with the error text"
+        - "Every call fails (e.g. wrong key) -> console says 0 images judged, exit 3"
+        - "Run cannot work (wrong folder, unknown option, bad setting, no key) -> one line, exit 1, no Jev call (US-05)"
+        - "Run is interrupted -> exit 130/143/137, no partial report; rerun into a fresh output folder"
+
+    - id: 4
+      name: Review uncertain and failed images
+      job: J1
+      persona: P1
+      command: "open <output>/report.md ; review/<image>.txt"
+      tui_mockup: |
+        | good/001.png | REVIEW | Leans GOOD but below the pass threshold 0.86; P(GOOD)=0.85 | review/good/001.png |
+        | good/042.png | REVIEW | Jev call failed after 3 attempts: HTTP 503 Service Unavailable | review/good/042.png |
+      shared_artifacts: [description_text]
+      emotional_state: {entry: focused, exit: "in control - knows why each image needs a look"}
+      integration_checkpoint: "Every REVIEW/SCRAP row has a copy and a .txt with the same description."
+
+    - id: 5
+      name: Run the same thing from Docker
+      job: J3
+      persona: P3
+      command: 'mkdir -p out && docker run --rm --user "$(id -u):$(id -g)" --env-file .env -v "$PWD/images:/in:ro" -v "$PWD/out:/out" damage-detector:0.1.0 --input=/in --output=/out'
+      tui_mockup: "Same summary line as step 3; report.md, report.json, scrap/, review/ appear in ./out"
+      shared_artifacts: [cli_flags, api_key_source, project_version]
+      emotional_state: {entry: "nervous before a demo", exit: "calm - one command worked"}
+      integration_checkpoint: "Container image contains no API key and no .env; --evaluate works the same way."
+      failure_modes: ["Key not passed -> message names OPENROUTER_API_KEY, exit 1", "Output folder not writable -> clear message, exit 1"]
+
+  shared_artifacts:
+    project_version: {source: "pom.xml project.version (0.1.0-SNAPSHOT)", consumers: [jar file name, Docker image tag, README commands], rule: "image tag = project.version without -SNAPSHOT (0.1.0-SNAPSHOT -> damage-detector:0.1.0); the SHA tag adds -<git-sha12>"}
+    pass_threshold: {source: "detector.pass-threshold (application.yml, default 0.86)", consumers: [report.md, report.json, evaluation.md, REVIEW description]}
+    safe_threshold: {source: "threshold sweep over the recorded outcomes of one evaluation run", consumers: [evaluation.md line "Lowest threshold with 0 false passes"], rule: "reported only; never changes pass_threshold (D17)"}
+    cli_flags: {source: "the CLI argument definition (--input, --output, --evaluate; DDD-10, DDD-12)", consumers: [usage line, jar run, docker run, README]}
+    verdict_rule: {source: "PassPolicy (domain)", consumers: [batch, evaluate, report.md header]}
+    class_labels: {source: "first sub-folder name below --input in evaluate mode only (good, bent_lead, cut_lead, damaged_case, misplaced)", consumers: [evaluation.md, evaluation.json], rule: "never sent to Jev (C11)"}
+    jev_errors: {source: "per-image Jev outcome", consumers: [console summary, report.md, report.json, evaluation.md]}
+    total_cost: {source: "OpenRouter usage.cost per call", consumers: [console summary, report.md, evaluation.md, evaluation.json]}
+    description_text: {source: "Inspection description", consumers: [report.md row, <copy>.txt]}
+    api_key_source: {source: "OPENROUTER_API_KEY environment variable", consumers: [jar run, docker run], rule: "never in image, code, logs or reports"}
+
+changelog:
+  - date: 2026-10-29
+    feature: transistor-damage-detection
+    change: DISCOVER seed (everything above discuss_refinement).
+  - date: 2026-10-30
+    feature: transistor-damage-detection
+    change: DISCUSS refinement - steps evaluate, choose threshold, inspect batch with error resilience, review, Docker run; Qwen removed; jobs moved to docs/product/jobs.yaml.
+  - date: 2026-11-06
+    feature: transistor-damage-detection
+    change: Final wave gate revision - P3 persona block; false-pass and refused-run branches in the emotional arc; P2 hand-off out of scope; DEVOPS demo command in step 5; exit codes; UC-3 wording; project_version, safe_threshold and cli_flags in the registry; evaluation.json added to total_cost consumers.

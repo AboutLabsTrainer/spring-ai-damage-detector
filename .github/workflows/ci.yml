@@ -1,0 +1,128 @@
+# CI for GitHub Flow (DEVOPS wave, feature-delta "CI/CD pipeline outline").
+# Jev stays stubbed (WireMock); the workflow references no secret. Actions are pinned by commit SHA.
+name: ci
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # gitleaks v8.30.1, tag commit 83d9cd684c87d95d656c1458ef04895a7f1cbd8e; SHA-256 of the linux_x64 release archive.
+  GITLEAKS_VERSION: 8.30.1
+  GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out with full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Scan the git history for secrets
+        shell: bash
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" git --redact --exit-code 1 --no-banner .
+
+      - name: Set up Temurin 21 with the Maven cache
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Build, unit tests, architecture rules and acceptance
+        run: ./mvnw -B verify
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: test-reports
+          path: |
+            target/surefire-reports/
+            target/failsafe-reports/
+          if-no-files-found: ignore
+
+  mutation:
+    if: github.event_name == 'pull_request'
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out with full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Temurin 21 with the Maven cache
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Changed production classes against main. pom.xml excludes the wiring and Cucumber-only classes,
+      # so only the gated ones (domain, jev, cli logic, OutputFolder) are mutated, at an 80 % kill rate.
+      - name: Mutation test the changed classes
+        shell: bash
+        run: |
+          classes=$(git diff --name-only --diff-filter=AM origin/main...HEAD -- 'src/main/java/*.java' \
+            | sed -e 's#^src/main/java/##' -e 's#\.java$##' -e 's#/#.#g' \
+            | awk '{ printf "%s%s,%s$*", separator, $0, $0; separator = "," }')
+          if [ -z "$classes" ]; then
+            echo "No added or modified production class: nothing to mutate."
+            exit 0
+          fi
+          ./mvnw -B test-compile org.pitest:pitest-maven:mutationCoverage \
+            -DtargetClasses="$classes" -DfailWhenNoMutations=false
+
+      - name: Upload the mutation report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: pit-report
+          path: target/pit-reports/
+          if-no-files-found: ignore
+
+  # The Jev stub is WireMock in Docker and no step has a key: the check plants its own canary key.
+  image:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The check runs the jar it takes out of the image next to the image, so it needs a JDK on the runner.
+      - name: Set up Temurin 21
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prove the key scan on deliberately bad images
+        run: scripts/container-check.sh --self-test
+
+      - name: Build the image and run every container check
+        run: scripts/container-check.sh

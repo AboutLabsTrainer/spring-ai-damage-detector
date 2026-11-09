@@ -9,8 +9,6 @@ import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.options;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.tomakehurst.wiremock.WireMockServer;
 import com.github.tomakehurst.wiremock.verification.LoggedRequest;
 import de.aboutlabs.damagedetector.DamageDetectorApplication;
@@ -29,6 +27,9 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.util.FileSystemUtils;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
 public class WalkingSkeletonSteps {
 
@@ -36,13 +37,13 @@ public class WalkingSkeletonSteps {
     private static final String CUT_LEAD_IMAGE = "cut_lead/000.png";
     private static final String DECISIONS_PATH = "/api/alpha/decisions";
 
-    private final ObjectMapper json = new ObjectMapper();
+    private final JsonMapper json = new JsonMapper();
     private WireMockServer jev;
     private Path workDir;
     private Path inputDir;
     private Path outputDir;
 
-    @Before
+    @Before("@walking_skeleton")
     public void startJevStub() throws IOException {
         jev = new WireMockServer(options().dynamicPort().http2PlainDisabled(true));
         jev.start();
@@ -51,9 +52,10 @@ public class WalkingSkeletonSteps {
         outputDir = workDir.resolve("output");
     }
 
-    @After
-    public void stopJevStub() {
+    @After("@walking_skeleton")
+    public void stopJevStub() throws IOException {
         jev.stop();
+        FileSystemUtils.deleteRecursively(workDir);
     }
 
     @Given("an input folder with one good-looking transistor image and one transistor image with a cut lead")

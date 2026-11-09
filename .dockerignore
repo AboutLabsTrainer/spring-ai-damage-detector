@@ -1,0 +1,11 @@
+*
+!pom.xml
+!mvnw
+!.mvn
+!src/main
+**/.env
+**/.env.*
+images/
+out/
+target/
+.git/

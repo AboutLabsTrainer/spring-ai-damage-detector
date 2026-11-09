@@ -1,0 +1,68 @@
+# Slice 04: Run the inspection and the evaluation from Docker
+
+**Story:** US-04 · **Job:** J3 · **Persona:** P3 Jonas Berger (illustrative) · **Contract:** DEVOPS, `## Wave: DEVOPS / [REF] Docker contract (slice 04)` in feature-delta.md · **Built in:** DELIVER
+
+**Execution order:** 01 → 02 → 03 → 05 → **04**. This slice is last.
+
+**Estimate: 1.5 days** (re-estimated 2026-11-06 against the DEVOPS contract; reference class: containerising a Spring Boot CLI plus a scripted image gate). This is a documented exception to the ≤1 day slice rule, so it ships in two ordered halves:
+- **Half A, 0.5 day:** Dockerfile, `.dockerignore`, `out/` in `.gitignore`, README commands, one run on real images.
+- **Half B, 1 day:** `scripts/container-check.sh` (key scan, stub parity, contract rows), the `image` CI job, the rollback drill.
+
+The `verify` and `mutation` CI jobs and PIT are not part of this slice. They are a separate precursor item (0.5 day) right after DELIVER step 1.
+
+## Goal
+One documented command produces the same report as the jar, with the API key supplied only at run time.
+
+## IN (user-visible contract)
+Batch:
+```bash
+mkdir -p out
+docker run --rm --user "$(id -u):$(id -g)" --env-file .env \
+  -v "$PWD/images:/in:ro" -v "$PWD/out:/out" \
+  damage-detector:0.1.0 --input=/in --output=/out
+```
+- The same with `--evaluate --input=/in --output=/out/eval`.
+- Output files in `./out` can be deleted by the host user without sudo.
+- Missing key → the existing message `No Jev API key: set the OPENROUTER_API_KEY environment variable`, exit 1.
+- The README shows the build and run commands.
+
+## OUT
+- Registry and publishing, image size targets.
+- docker-compose, Kubernetes, web endpoint.
+- Copying `images/` into the image (312 MB, licence). Always mounted.
+
+## Learning hypothesis
+- **Disproves "the CLI is container-ready without code changes" if it fails:** the containerised run behaves differently from the jar (paths, file ownership, missing outputs, key handling). That would show hidden host assumptions in the adapters.
+- **Confirms if it succeeds:** the showcase runs on any Docker host, and the image can be shared without the key.
+
+## Acceptance criteria
+The scenario gate is `scripts/container-check.sh`, not `./mvnw verify` (Q4).
+
+1. With good/000.png and cut_lead/000.png mounted and stubbed Jev: `./out` holds report.md, report.json and `scrap/cut_lead/000.png(.txt)`, and the verdict counts equal the jar run.
+2. The shared image holds no OpenRouter key and no `.env` in its configuration, its history or its files.
+3. Without OPENROUTER_API_KEY: message, exit 1, no image processed.
+4. Files in `./out` can be removed by the host user without sudo.
+5. **Production data:** the documented command on ≥5 real images from `images/` against real Jev writes report.md. Record the summary line below.
+
+## Dependencies
+- Slice 05, because the Docker failure modes rely on its refusals. Slice 03 recommended first (demo runs must not abort).
+- Docker Engine on the demo host.
+
+## Dogfood moment
+Same day: run the documented command on a machine or user account without JDK/Maven.
+
+## Evidence (fill after the run)
+- Summary line: `Inspected 5 images: 1 PASS, 2 SCRAP, 2 REVIEW (REVIEW share 40.0 %; 0 Jev errors in REVIEW), Jev cost $0.00074 -> /out/report.md`
+- Date: 2026-11-09. Cost: $0.00074. Command: the documented batch command (`--user "$(id -u):$(id -g)" --env-file .env`, `/in` read-only, `/out` mounted below `out/`), exit code 0, on 5 real images copied from `images/` (good/000-002, cut_lead/000, bent_lead/000), image `damage-detector:0.1.0` built with Docker only. Output files belong to the host user; the key was never printed.
+- Ctrl-C check under `docker run` (SIGINT to the client after 6 s, 40 images): `exit code: 130`, no `report.md`, empty `docker ps`.
+- Half A gates: `scripts/container-check.sh --self-test` reports PASS for each detection route (configuration, history, deleted-layer `.env`, key in a layer file, key inside the jar) and for a clean control image. `image-scan` passes on the shared image, and fails (jar-env-file, jar-key) when `.dockerignore` is emptied. The real `.env` hash was identical before and after every run. Base image digests re-checked 2026-11-09: still the newest 21 JRE and JDK noble tags.
+
+## Evidence, half B (2026-11-09)
+- `scripts/container-check.sh` (no argument) now implements every row: image-scan, parity, evaluation, runtime-key, missing-key, exit-codes, ownership, forgotten-mount, then the real `.env` hash check. All findings PASS. The Docker scenarios of `milestone-4-docker-run.feature` run green with `./mvnw test -Dtest=WalkingSkeletonAcceptanceTest -Dacceptance.inprocess.tags=@container` (10 scenarios, 0 failures).
+- Stub: `wiremock/wiremock:3.13.2@sha256:0d4ecb3e...61b3` (equal to `wiremock.version`; the script fails if they differ; digest re-read from Docker Hub 2026-11-09, unchanged). It runs with `--disable-http2-plain`, as the acceptance stub does, because the JDK client's h2c upgrade gets a connection error from the container. Mappings are swapped through the admin API (normal, reject-all 401, false-pass). `--detector.jev.base-url` is the only stub switch.
+- Parity: the jar taken out of the image (`/app/app.jar`) runs on the host with the same stubbed answers. `report.json` counts (`total`, `pass`, `scrap`, `review`, `judged`, `jevErrors`) and the set of output files are equal, for the inspection and the evaluation.
+- Run endings in Docker and jar: all calls rejected gives 3, a false pass under `--evaluate` gives 2, a missing key gives 1 with the one-line INV-5 message and 0 Jev calls, a forgotten `/out` mount gives 1 with `Cannot write to output folder /out` and 0 Jev calls.
+- Key: a marked key with `--debug` appears nowhere in `/out` or the captured stdout and stderr. Output written with `--user "$(id -u):$(id -g)"` is owned by the invoking user and removed by `rm -rf` without extra rights.
+- Needs on the host: Docker, curl, and a JDK 21 for the jar run.
+- **Rollback drill:** built `0.1.0-400c0a23331c` (HEAD) and `0.1.0-b357db5199eb` (the Dockerfile commit, from `git archive`, both clean trees). `docker tag damage-detector:0.1.0-b357db5199eb damage-detector:0.1.0` moved the demo tag back (label `org.opencontainers.image.revision` read `b357db5199eb`). `CONTAINER_CHECK_IMAGE=damage-detector:0.1.0 scripts/container-check.sh parity` then PASSed report-files and verdict-counts-equal on the rolled-back tag. Drill images removed afterwards; check images, the stub container and the network are removed by the script on every exit path.
+- CI: `ci.yml` has an `image` job (needs `verify`, pull requests and pushes to `main`, read-only permissions, SHA-pinned actions, no secrets) that runs `--self-test` and the full check. `actionlint` (rhysd/actionlint:latest in Docker) reports no finding.

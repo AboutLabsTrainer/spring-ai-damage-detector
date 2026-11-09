@@ -1,0 +1,15 @@
+# Local test hooks (install: pre-commit install --hook-type pre-commit --hook-type pre-push)
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+  - repo: local
+    hooks:
+      - id: maven-verify
+        name: ./mvnw verify (Docker-free test suite)
+        entry: ./mvnw -B -q verify
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

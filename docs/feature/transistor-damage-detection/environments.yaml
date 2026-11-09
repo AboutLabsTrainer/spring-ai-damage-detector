@@ -1,0 +1,80 @@
+# environments.yaml: consumed by DISTILL for Mandate 4 (Environmental Realism).
+# Feature: transistor-damage-detection. DEVOPS wave, 2026-11-06.
+# Narrative and rationale: feature-delta.md, "Wave: DEVOPS" sections.
+target_environments:
+  - name: local-jar
+    description: "Repackaged Spring Boot jar on a host with JDK 21"
+    platform: [wsl2, linux]
+    run: "java -jar target/damage-detector-*.jar [--evaluate] --input=<folder> --output=<folder>"
+    jev: "real for hand runs; WireMock in ./mvnw verify"
+    secret_source: ".env exported into the shell (set -a; . ./.env; set +a)"
+    preconditions:
+      - "JDK 21"
+      - "OPENROUTER_API_KEY with credit, for real runs only"
+      - "images/ present locally (gitignored), for real runs only"
+  - name: docker-run
+    description: "Image started with docker run; input read-only, output on a host bind mount"
+    platform: [wsl2, linux]
+    run: 'docker run --rm --user "$(id -u):$(id -g)" --env-file .env -v "$PWD/images:/in:ro" -v "$PWD/out:/out" damage-detector:0.1.0 --input=/in --output=/out'
+    run_evaluate: 'docker run --rm --user "$(id -u):$(id -g)" --env-file .env -v "$PWD/images:/in:ro" -v "$PWD/out:/out" damage-detector:0.1.0 --evaluate --input=/in --output=/out/eval'
+    jev: "real for hand runs; WireMock (pinned by digest) on a user-defined Docker network in scripts/container-check.sh"
+    secret_source: "--env-file .env or -e OPENROUTER_API_KEY (name only); never in the image"
+    preconditions:
+      - "Docker Engine or Docker Desktop with WSL integration"
+      - "./out exists before the run (mkdir -p out); otherwise Docker creates it root-owned"
+      - ".env in plain KEY=value form (no export, no quotes)"
+      - "host output folder is not inside the host input folder (DDD-22 cannot see this across mounts; the host-side outside guard in the demo commands checks it before docker run)"
+  - name: ci
+    description: "GitHub Actions; Jev stubbed, no API key; active only once a GitHub remote exists"
+    platform: [github-actions-ubuntu-latest]
+    run: "./mvnw -B verify; scripts/container-check.sh; PIT on changed classes for pull requests"
+    jev: "stub only (WireMock)"
+    secret_source: "none; a per-run canary, planted only in a mktemp copy of the tree, satisfies the key probe and tests K4/INV-3"
+    preconditions:
+      - "GitHub remote exists"
+      - "runner UID differs from 1000, so the --user path is exercised"
+      - "verify and mutation jobs exist from the CI and PIT precursor, right after DELIVER step 1"
+      - "the image job exists from slice 04 onward"
+      - "Dependabot alerts are on from remote creation, before the first PR"
+
+coexistence_matrix:
+  - tool: real .env during scripts/container-check.sh
+    must_not_break: true
+    contract: "never written, moved or copied; the build uses a mktemp copy with a trap cleanup; sha256 before and after must match; the real-key scan only reads the untouched original tree"
+  - tool: java -jar and docker run on the same output folder
+    must_not_break: true
+    contract: "--user with the host UID gives both runs the same file owner"
+  - tool: shared .env for jar and --env-file
+    must_not_break: true
+    contract: "plain KEY=value lines"
+  - tool: previous image tags (rollback)
+    must_not_break: true
+    contract: "immutable tag damage-detector:0.1.0-<git-sha12> survives rebuilds of :0.1.0"
+  - tool: other containers on the host
+    must_not_break: true
+    contract: "no published ports, no named volumes; container-check removes its own network and containers"
+  - tool: ./mvnw verify without Docker
+    must_not_break: true
+    contract: "container checks stay outside verify"
+  - tool: two concurrent runs on one output folder
+    must_not_break: false
+    contract: "not supported; one run per output folder"
+
+platform_coverage:
+  WSL: ["WSL2 with Docker Desktop 29.x, project on the WSL ext4 filesystem (verified 2026-11-06)"]
+  Linux: ["Docker Engine on Ubuntu (design target; first proved by CI on ubuntu-latest)"]
+  CI: ["GitHub Actions ubuntu-latest"]
+
+deployment_assumptions:
+  - "Deployment is recreate: rebuild the image and rerun; a batch process has no running service"
+  - "Rollback is retagging the previous immutable SHA tag and rerunning; no state or data migration"
+  - "A run is repeatable into a fresh output folder; reused folders keep old scrap/ and review/ files"
+  - "Removing the tool means removing the image; it installs nothing on the host outside --output"
+  - "The image holds no key, no .env, no images/ and no test fixtures"
+  - "docker run returns exit codes 0-3 unchanged; 125-127 are Docker failures, not detector results"
+  - "Exit 130 (SIGINT), 143 (SIGTERM) and 137 (SIGKILL) mean interrupted, not a detector result; docker run forwards signals by default (sig-proxy)"
+  - "Reports are written only at the end of a run; a folder without report.md or evaluation.md is incomplete; rerun into a fresh --output"
+  - "SIGKILL on the docker run client is not forwarded; the container keeps running until docker kill"
+  - "Images built from a dirty tree carry a -dirty tag suffix and are never rollback targets"
+  - "No git hooks and no hook manager are used; hook coexistence does not apply"
+  - "/mnt/c (DrvFs) bind mounts are untested; the output write probe refuses a mount that does not work"

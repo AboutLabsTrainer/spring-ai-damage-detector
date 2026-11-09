@@ -2,18 +2,23 @@ spring:
   main:
     banner-mode: off
     web-application-type: none
-  http:
-    client:
-      connect-timeout: 10s
-      read-timeout: 120s
 
 logging:
   level:
     root: warn
+  threshold:
+    # --debug sets the property debug to an empty value, which logback reads as DEBUG; without it the console stays off.
+    console: ${debug:off}
 
 detector:
-  pass-threshold: 0.86
+  pass-threshold: 0.87
   jev:
     base-url: https://openrouter.ai
     model: typesafe/jev-1.13
     api-key: ${OPENROUTER_API_KEY:}
+    connect-timeout: 10s
+    read-timeout: 30s
+    retry:
+      max-attempts: 3
+      initial-backoff: 1s
+      max-backoff: 10s

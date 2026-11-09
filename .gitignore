@@ -19,3 +19,6 @@ target/
 # nWave activation marker (keep .nwave/local-config.json trackable)
 .nwave/*
 !.nwave/local-config.json
+
+# Local run output (may hold copies of MVTec images)
+out/

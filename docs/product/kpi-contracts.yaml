@@ -1,0 +1,158 @@
+# KPI contracts (SSOT). Created by the DEVOPS wave of transistor-damage-detection, 2026-11-06.
+# DISTILL tightened it on 2026-11-06: each KPI names its scenarios (tag @kpi-<id>) and its measurement window.
+# There is no external monitoring stack:
+# every KPI is read from a run artifact or a CI check.
+# gate: hard = fails a run or a pipeline; soft = recorded and read by a person.
+# value_source says where the real number comes from; mechanism_check is the stubbed proof.
+schema_version: "0.1"
+kpis:
+  - id: K1
+    name: False passes on the labelled set
+    role: north_star
+    feature: transistor-damage-detection
+    stories: [US-01, US-02]
+    target: 0
+    baseline: "0/40 at t=0.86, in-sample (SPIKE)"
+    baseline_measured: "2026-11-09: 0 false passes in 3 full real runs (253 images)"
+    threshold: "false_passes == 0 at the configured threshold"
+    gate: hard
+    scenario_tag: "@kpi-K1"
+    scenarios: "milestone-1: Presenter sees zero false passes on the labelled set; A defect that passes is named as a false pass; A false pass is also reported as a problem. milestone-2: A defect above the configured threshold moves the safe threshold; Presenter is told when no threshold is safe; The sweep costs no extra Jev calls"
+    measurement_window: "one evaluation run; the stub proves the mechanism, only a real run gives the value"
+    data_collection:
+      source: evaluation.json
+      fields: ["images[].path", "images[].label", "images[].verdict", "summary.falsePasses", "falsePassImages[].path", "falsePassImages[].pGood"]
+      derivation: "count of images with label != good and verdict == PASS"
+      frequency: per evaluation run, by hand, real Jev
+    where_visible: ["evaluate summary line (stdout)", "evaluation.md false-pass list"]
+    signal: "exit code 2"
+    mechanism_check: "verify job: stub false-pass acceptance scenario; container-check exit-code row"
+  - id: K2
+    name: Good auto-pass rate
+    role: informative
+    feature: transistor-damage-detection
+    stories: [US-01, US-02]
+    target: "reported in every evaluation; >= 50 % informative"
+    baseline: "14/26 = 54 % (SPIKE)"
+    baseline_measured: "2026-11-09: good auto-pass 46.5 % and 45.1 % at 0.86 (99 and 96 of 213); 34.3 % (73/213) at 0.87, the new default"
+    threshold: none
+    gate: soft
+    scenario_tag: "@kpi-K2"
+    scenarios: "milestone-1: Presenter sees how many good parts pass automatically. milestone-2: Presenter sees the trade-off between false passes and auto-passed good parts"
+    measurement_window: "one evaluation run; the stub proves the mechanism, only a real run gives the value"
+    data_collection:
+      source: evaluation.json
+      fields: ["summary.goodPassed", "summary.goodTotal", "sweep[].goodPassed", "sweep[].goodTotal"]
+      derivation: "PASS among label == good, divided by label == good; sweep row at the configured t"
+      frequency: per evaluation run, by hand, real Jev
+    where_visible: ["evaluate summary line (stdout)", "evaluation.md sweep row at the configured t"]
+    signal: none
+    mechanism_check: "verify job: sweep acceptance scenarios"
+  - id: K3
+    name: Complete report despite Jev failures
+    role: outcome
+    feature: transistor-damage-detection
+    stories: [US-03]
+    target: "100 % of runs complete; 0 errored images PASS"
+    baseline: "0 % (one failure aborts the batch)"
+    baseline_measured: "2026-11-09: batch completed with 3 Jev errors under simulated network loss; no errored image passed"
+    threshold: "report written; no image with jevError has verdict PASS"
+    gate: hard
+    scenario_tag: "@kpi-K3"
+    scenarios: "milestone-3: Batch completes and counts a failed image; A failure that may pass goes away is retried, then the image goes to REVIEW; The batch of ten reports every image; The report says how many images Jev judged; A failed image carries no Jev choice; Petra is warned when no image could be judged; Petra is warned when Jev cannot be reached at all"
+    measurement_window: "every batch run"
+    data_collection:
+      source: report.json
+      fields: ["summary.jevErrors", "summary.judged", "summary.jevCost", "summary.costIsLowerBound", "images[].jevError", "images[].verdict"]
+      frequency: every batch run; acceptance test with 2 of 10 calls failing; slice-03 real run
+    where_visible: ["batch summary line (stdout)", "report.md", "review/*.txt"]
+    signal: "failing test; exit code 3 when no image was judged"
+    mechanism_check: "verify job: WireMock fault scenarios"
+  - id: K4
+    name: Container parity and no key in the image
+    role: outcome
+    feature: transistor-damage-detection
+    stories: [US-04]
+    target: "verdict counts identical in 100 % of compared runs; 0 key occurrences in the image"
+    baseline: "no container"
+    baseline_measured: "2026-11-09: key absent from the image (container-check image-scan PASS); jar/image verdict counts compared on the same 40 images"
+    threshold: "summary fields equal between jar and image; canary, sk-or- and .env absent; bare name OPENROUTER_API_KEY absent from image config and history"
+    gate: hard
+    scenario_tag: "@kpi-K4"
+    scenarios: "milestone-4: Presenter gets the usual report from Docker; Presenter gets the evaluation from Docker; The shared Docker image carries no API key (run by scripts/container-check.sh, outside verify)"
+    measurement_window: "every container-check run"
+    data_collection:
+      source: scripts/container-check.sh
+      fields:
+        - report.json summary (total, pass, scrap, review, judged, jevErrors)
+        - output file set
+        - docker image inspect
+        - docker history --no-trunc
+        - all docker save layers
+        - unpacked /app/app.jar
+      frequency: every PR and push to main once the image job exists; by hand on the demo host
+    where_visible: ["CI image job", "container-check output"]
+    signal: "job fails; a leaked key in a shared image must be rotated at OpenRouter"
+    mechanism_check: "per-run canary key planted only in a mktemp copy of the tree, because CI has no real key; on the demo host a real-key scan of the image built from the untouched original"
+  - id: K5
+    name: Cost and time of a full evaluation
+    role: guardrail
+    feature: transistor-damage-detection
+    stories: [US-01]
+    target: "<= $0.05 and <= 10 min per 253-image run"
+    baseline: "$0.00015/image, 1.2 s/image (SPIKE)"
+    baseline_measured: "2026-11-09: $0.03724 per 253 images, 163-166 s"
+    threshold: "cost <= 0.05 USD; wall clock <= 600 s"
+    gate: soft
+    scenario_tag: "@kpi-K5"
+    scenarios: "milestone-1: The evaluation keeps its cost and duration as evidence (proves the fields exist; a stub has no real cost or latency)"
+    measurement_window: "one full 253-image evaluation, by hand"
+    data_collection:
+      source: "evaluation.json and evaluation.md"
+      fields: ["jevCost", "costIsLowerBound", "elapsedSeconds"]
+      frequency: per full evaluation, by hand, copied into the slice evidence
+      limits:
+        - "reported cost is a lower bound after retries or Jev errors (DDD-15)"
+    where_visible: ["evaluation.json", "evaluation.md", "slice evidence section"]
+    signal: "read by hand"
+    mechanism_check: "@kpi-K5 proves evaluation.json and evaluation.md carry the fields; the values need a real run"
+  - id: K6
+    name: One-line refusal for a run that cannot work
+    role: outcome
+    feature: transistor-damage-detection
+    stories: [US-05]
+    target: "100 % of the US-05 INV-5 rows: one line, exit 1, no stack trace, 0 Jev calls"
+    baseline: "not measured; the skeleton has no central error handling"
+    baseline_measured: "2026-11-09: refusals give one line, exit 1, no Jev cost"
+    threshold: "every US-05 INV-5 row gives exactly one stderr line, exit 1, no stack trace and 0 Jev calls"
+    gate: hard
+    scenario_tag: "@kpi-K6"
+    scenarios: "milestone-5: all 7 scenarios (25 examples). milestone-4: A missing key is reported before any work; A forgotten output folder is refused (container rows, run by scripts/container-check.sh)"
+    measurement_window: "every ./mvnw verify, once the scenarios are enabled; one slice-05 hand run"
+    data_collection:
+      source: "stderr, exit code and WireMock request journal per refusal row"
+      fields: ["stderr line count", "exit code", "stack trace absent", "Jev call count"]
+      frequency: every ./mvnw verify; slice-05 hand run
+    where_visible: ["stderr", "verify job test report"]
+    signal: "failing test"
+    mechanism_check: "verify job: acceptance row per refusal; container-check missing-key and forgotten-mount rows"
+  - id: G1
+    name: Jev requests containing a path or a label
+    role: guardrail
+    feature: transistor-damage-detection
+    stories: [US-01]
+    target: 0
+    baseline: "0 (skeleton test)"
+    baseline_measured: "2026-11-09: no path or label in Jev requests (acceptance scenario + ArchUnit rule 2)"
+    threshold: "no file name, relative path, label with a path separator or input folder name (UC-3)"
+    gate: hard
+    scenario_tag: "@kpi-G1"
+    scenarios: "milestone-1: Folder names are only used for scoring"
+    measurement_window: "every ./mvnw verify, once the scenario is enabled"
+    data_collection:
+      source: WireMock request journal
+      fields: [request body]
+      frequency: every ./mvnw verify
+    where_visible: ["verify job test report"]
+    signal: "failing test"
+    mechanism_check: "acceptance assertion plus ArchUnit rule 2"
