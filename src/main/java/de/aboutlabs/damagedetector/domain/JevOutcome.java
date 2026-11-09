@@ -9,10 +9,6 @@ public sealed interface JevOutcome {
     /** {@code attempts} above 1 means earlier attempts failed, so the reported cost is a lower bound (DDD-15). */
     record Judged(JevJudgement judgement, int attempts) implements JevOutcome {
 
-        public Judged(JevJudgement judgement) {
-            this(judgement, 1);
-        }
-
         @Override
         public boolean hadFailedAttempt() {
             return attempts > 1;

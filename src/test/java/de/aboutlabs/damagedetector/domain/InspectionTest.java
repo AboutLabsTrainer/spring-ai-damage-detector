@@ -13,7 +13,7 @@ class InspectionTest {
     private static final PassPolicy POLICY = new PassPolicy(0.86);
 
     private static JevOutcome judged(String choice, Map<String, Double> probabilities, double cost) {
-        return new JevOutcome.Judged(new JevJudgement(choice, probabilities, 0.4, cost));
+        return new JevOutcome.Judged(new JevJudgement(choice, probabilities, 0.4, cost), 1);
     }
 
     @Test

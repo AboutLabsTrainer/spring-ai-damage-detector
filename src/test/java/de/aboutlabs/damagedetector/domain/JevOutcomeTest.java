@@ -12,14 +12,6 @@ class JevOutcomeTest {
 
     private static final JevJudgement JUDGEMENT = new JevJudgement("GOOD", Map.of("GOOD", 0.9), 0.4, 0.001);
 
-    @Test
-    void a_judgement_without_an_attempt_count_took_one_attempt() {
-        JevOutcome.Judged outcome = new JevOutcome.Judged(JUDGEMENT);
-
-        assertThat(outcome.attempts()).isEqualTo(1);
-        assertThat(outcome.judgement()).isSameAs(JUDGEMENT);
-    }
-
     @ParameterizedTest
     @CsvSource({"1,false", "2,true", "3,true"})
     void a_judgement_had_a_failed_attempt_only_after_a_retry(int attempts, boolean expected) {

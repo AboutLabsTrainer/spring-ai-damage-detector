@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 class LabelledOutcomeTest {
 
     private static LabelledOutcome judged(Label label, String choice) {
-        return new LabelledOutcome("a.png", label, new JevOutcome.Judged(new JevJudgement(choice, Map.of("GOOD", 0.1), 0.4, 0.0)));
+        return new LabelledOutcome("a.png", label, new JevOutcome.Judged(new JevJudgement(choice, Map.of("GOOD", 0.1), 0.4, 0.0), 1));
     }
 
     @ParameterizedTest

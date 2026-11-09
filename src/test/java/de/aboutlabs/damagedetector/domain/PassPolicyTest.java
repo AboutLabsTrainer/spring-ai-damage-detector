@@ -13,7 +13,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 class PassPolicyTest {
 
     private static JevOutcome judged(String choice, double pGood) {
-        return new JevOutcome.Judged(new JevJudgement(choice, Map.of("GOOD", pGood), 0.4, 0.0));
+        return new JevOutcome.Judged(new JevJudgement(choice, Map.of("GOOD", pGood), 0.4, 0.0), 1);
     }
 
     @ParameterizedTest

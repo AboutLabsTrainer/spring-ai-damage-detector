@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import org.junit.jupiter.api.Test;
 
+/** CONTRACT_SHAPE: pure-function */
 class ThresholdSweepTest {
 
     private static ThresholdSweep.Row row(double threshold, int falsePasses) {
@@ -17,15 +18,15 @@ class ThresholdSweepTest {
     void a_row_is_found_by_its_threshold() {
         ThresholdSweep sweep = ThresholdSweep.of(List.of(row(0.5, 2), row(0.83, 0)));
 
-        assertThat(sweep.rowFor(0.83)).isEqualTo(row(0.83, 0));
-        assertThat(sweep.rowFor(0.5).falsePasses()).isEqualTo(2);
+        assertThat(SweepRows.rowFor(sweep, 0.83)).isEqualTo(row(0.83, 0));
+        assertThat(SweepRows.rowFor(sweep, 0.5).falsePasses()).isEqualTo(2);
     }
 
     @Test
     void a_threshold_that_was_not_swept_has_no_row() {
         ThresholdSweep sweep = ThresholdSweep.of(List.of(row(0.5, 2)));
 
-        assertThatThrownBy(() -> sweep.rowFor(0.51)).isInstanceOf(NoSuchElementException.class).hasMessage("no sweep row for threshold 0.51");
+        assertThatThrownBy(() -> SweepRows.rowFor(sweep, 0.51)).isInstanceOf(NoSuchElementException.class).hasMessage("no sweep row for threshold 0.51");
     }
 
     @Test
