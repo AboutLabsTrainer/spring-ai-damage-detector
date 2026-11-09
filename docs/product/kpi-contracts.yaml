@@ -13,6 +13,7 @@ kpis:
     stories: [US-01, US-02]
     target: 0
     baseline: "0/40 at t=0.86, in-sample (SPIKE)"
+    baseline_measured: "2026-11-09: 0 false passes in 3 full real runs (253 images)"
     threshold: "false_passes == 0 at the configured threshold"
     gate: hard
     scenario_tag: "@kpi-K1"
@@ -33,6 +34,7 @@ kpis:
     stories: [US-01, US-02]
     target: "reported in every evaluation; >= 50 % informative"
     baseline: "14/26 = 54 % (SPIKE)"
+    baseline_measured: "2026-11-09: good auto-pass 46.5 % and 45.1 % at 0.86 (99 and 96 of 213); 34.3 % (73/213) at 0.87, the new default"
     threshold: none
     gate: soft
     scenario_tag: "@kpi-K2"
@@ -53,6 +55,7 @@ kpis:
     stories: [US-03]
     target: "100 % of runs complete; 0 errored images PASS"
     baseline: "0 % (one failure aborts the batch)"
+    baseline_measured: "2026-11-09: batch completed with 3 Jev errors under simulated network loss; no errored image passed"
     threshold: "report written; no image with jevError has verdict PASS"
     gate: hard
     scenario_tag: "@kpi-K3"
@@ -72,6 +75,7 @@ kpis:
     stories: [US-04]
     target: "verdict counts identical in 100 % of compared runs; 0 key occurrences in the image"
     baseline: "no container"
+    baseline_measured: "2026-11-09: key absent from the image (container-check image-scan PASS); jar/image verdict counts compared on the same 40 images"
     threshold: "summary fields equal between jar and image; canary, sk-or- and .env absent; bare name OPENROUTER_API_KEY absent from image config and history"
     gate: hard
     scenario_tag: "@kpi-K4"
@@ -97,6 +101,7 @@ kpis:
     stories: [US-01]
     target: "<= $0.05 and <= 10 min per 253-image run"
     baseline: "$0.00015/image, 1.2 s/image (SPIKE)"
+    baseline_measured: "2026-11-09: $0.03724 per 253 images, 163-166 s"
     threshold: "cost <= 0.05 USD; wall clock <= 600 s"
     gate: soft
     scenario_tag: "@kpi-K5"
@@ -118,6 +123,7 @@ kpis:
     stories: [US-05]
     target: "100 % of the US-05 INV-5 rows: one line, exit 1, no stack trace, 0 Jev calls"
     baseline: "not measured; the skeleton has no central error handling"
+    baseline_measured: "2026-11-09: refusals give one line, exit 1, no Jev cost"
     threshold: "every US-05 INV-5 row gives exactly one stderr line, exit 1, no stack trace and 0 Jev calls"
     gate: hard
     scenario_tag: "@kpi-K6"
@@ -137,6 +143,7 @@ kpis:
     stories: [US-01]
     target: 0
     baseline: "0 (skeleton test)"
+    baseline_measured: "2026-11-09: no path or label in Jev requests (acceptance scenario + ArchUnit rule 2)"
     threshold: "no file name, relative path, label with a path separator or input folder name (UC-3)"
     gate: hard
     scenario_tag: "@kpi-G1"

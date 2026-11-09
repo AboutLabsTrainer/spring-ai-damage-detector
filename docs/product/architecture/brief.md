@@ -212,7 +212,7 @@ DISTILL asserts this set after a full run and after each refusal run. Pre-existi
 |---|---|
 | Batch CLI | `--input=<folder> --output=<folder>` → summary line on stdout (with `N Jev errors in REVIEW`), exit code (table below), report files |
 | Evaluate CLI | `--evaluate --input=<labelled folder> --output=<folder>` → evaluation summary line, `evaluation.md/json`, exit code. `--evaluate` takes no value |
-| Configuration | `detector.pass-threshold` (default 0.86; bound as raw text, so an unusable value is a refusal and not a binding failure)<br>`detector.jev.retry.max-attempts` (3), `.initial-backoff` (1s), `.max-backoff` (10s)<br>`detector.jev.connect-timeout` (10s), `detector.jev.read-timeout` (30s)<br>`detector.jev.base-url`, `detector.jev.model`<br>`DetectorConfiguration` maps these to plain constructor values |
+| Configuration | `detector.pass-threshold` (default 0.87, raised from 0.86 by the user after the slice-02 sweep on 2026-11-09; bound as raw text, so an unusable value is a refusal and not a binding failure)<br>`detector.jev.retry.max-attempts` (3), `.initial-backoff` (1s), `.max-backoff` (10s)<br>`detector.jev.connect-timeout` (10s), `detector.jev.read-timeout` (30s)<br>`detector.jev.base-url`, `detector.jev.model`<br>`DetectorConfiguration` maps these to plain constructor values |
 | Output formats | Ratified field by field in feature-delta DDD-14 (evaluation) and DDD-15 (batch). Summary lines and refusal lines show paths **as the user typed them** |
 | Secret | env `OPENROUTER_API_KEY` → `detector.jev.api-key` |
 | Unknown options | Refused at bootstrap step 1. A dotted property and the Spring flags `debug` and `trace` are allowed |
@@ -364,3 +364,15 @@ Details: `docs/feature/transistor-damage-detection/feature-delta.md`, "Wave: DEV
 - [ADR-004](adr-004-jev-failure-resilience-retry-decorator.md): Jev failure resilience with a retry decorator and REVIEW fallback
 - [ADR-005](adr-005-cli-error-feedback-and-exit-codes.md): Central CLI error feedback, bootstrap probes, logging and exit codes
 - [ADR-006](adr-006-upgrade-to-spring-boot-4-1.md): Upgrade to Spring Boot 4.1
+
+### Component inventory (shipped 2026-11-09)
+
+- **Entry and wiring:** `DamageDetectorApplication`, `DetectorLauncher`, `DetectorConfiguration`, `DetectorProperties`, `LogSink`.
+- **cli:** `DetectorCommand`, `CliArguments`, `PassThreshold`, `ErrorFeedback` (central error mapper, exit codes).
+- **probe:** `Probe`, `ProbeResult` (bootstrap checks before any paid call).
+- **domain (framework-free):** `Jev` port, `JevJudgement`, `JevOutcome`, `PassPolicy`, `Verdict`, `Inspection`, `BatchReport`, `Evaluation`, `ThresholdSweep`, `Label`, `LabelledOutcome`.
+- **inspection:** `Inspector`, `ImageFolder`, `OutputFolder`.
+- **batch / evaluate:** `BatchInspection`, `ReportWriter`; `LabelledEvaluation`, `EvaluationWriter`.
+- **jev adapters:** `OpenRouterJev`, `RetryingJev` (decorator), `AttemptResult`, `AttemptSource`, `DefectQuestion`, `Sleeper`.
+- **Delivery:** `Dockerfile`, `scripts/container-check.sh`, `.github/workflows/ci.yml`.
+- **Deferred:** nothing planned was deferred. Default pass threshold is 0.87.

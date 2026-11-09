@@ -546,7 +546,7 @@ DEVOPS handoff: K4 and K5 need no runtime monitoring. They are measured per run 
 |---|---|---|
 | Batch CLI | `java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --input=<folder> --output=<folder>` | skeleton, US-03, US-05 |
 | Evaluate CLI | `… --evaluate --input=<labelled folder> --output=<folder>` | US-01, US-02 |
-| Threshold | `--detector.pass-threshold=<0..1>` (Spring property, default 0.86) | US-02, US-05 |
+| Threshold | `--detector.pass-threshold=<0..1>` (Spring property, default 0.87 since 2026-11-09, see D20) | US-02, US-05 |
 | Retry settings | `detector.jev.retry.max-attempts` (default 3), `initial-backoff`, `max-backoff` (DDD-7) | US-03 |
 | Container | `mkdir -p out && docker run --rm --user "$(id -u):$(id -g)" --env-file .env -v "$PWD/images:/in:ro" -v "$PWD/out:/out" damage-detector:0.1.0 [same flags]` | US-04 |
 | Secret | env `OPENROUTER_API_KEY` | all |
@@ -872,7 +872,7 @@ Added in final wave gate revision cycle 1 (2026-11-06):
 |---|---|---|
 | Batch CLI | `--input=<folder> --output=<folder>` → summary line (DDD-15), exit 0/1/3 or interrupted 130/143/137, report files | WS, US-03, US-05 |
 | Evaluate CLI | `--evaluate --input=<labelled> --output=<folder>` → evaluation summary line (DDD-14), `evaluation.md/json`, exit 0/1/2/3 or interrupted 130/143/137 | US-01, US-02 |
-| Threshold | `--detector.pass-threshold=<0..1>` (default 0.86; out of range or not a number → exit 1, one line, DDD-33) | US-02, US-05 |
+| Threshold | `--detector.pass-threshold=<0..1>` (default 0.87 since 2026-11-09, see D20; out of range or not a number → exit 1, one line, DDD-33) | US-02, US-05 |
 | Retry | `--detector.jev.retry.max-attempts` (3), `.initial-backoff` (1s), `.max-backoff` (10s) | US-03 |
 | Jev connection | `--detector.jev.base-url`, `.model`, `.connect-timeout` (10s), `.read-timeout` (30s) | US-03, US-05 |
 | Secret | env `OPENROUTER_API_KEY` | all |
@@ -1595,3 +1595,73 @@ RED scaffolds, marker `// SCAFFOLD: true`, methods throw `AssertionError("Not ye
 | 10 | Every entry point exercised by protocol | Pass as scenarios, all pending. Not by a walking-skeleton scenario: decision Q11 |
 | 12, 13, 15 | Python-specific checks (`capsys`, `des.*` imports, `noqa`) | Not applicable |
 | 14 | Timing budgets of at least 200 ms | Pass: no timing assertion; the time-limit scenario uses 1 s |
+
+## Wave: DELIVER / [REF] Implementation summary
+
+- Date 2026-11-09. 14 roadmap steps (slices 01, 02, 03, 05, 04 plus refactor steps), all RED/GREEN/COMMIT PASS in `deliver/execution-log.json`; `des-verify-integrity` exit 0.
+- Shipped: `--evaluate` mode with threshold sweep (US-01, US-02), retry decorator with REVIEW fallback (US-03), central CLI error feedback and bootstrap probes (US-05), Docker image and `scripts/container-check.sh` (US-04), CI workflow, README.
+- Default pass threshold is 0.87 (see Upstream Issues).
+- Refactor pass: commits 00fb855, a071806. Adversarial review revision pass: ae8d097..020c85e.
+
+## Wave: DELIVER / [REF] Files modified
+
+From `git diff --stat c4e65f7..HEAD`: 83 files, +4121 / -484.
+
+- **Production (src/main, 33 files):** `DetectorLauncher`, `DetectorConfiguration`, `DetectorProperties`, `application.yml`; `cli/` (`DetectorCommand` new, `CliArguments`, `ErrorFeedback`, `PassThreshold`); `domain/` (`Evaluation`, `ThresholdSweep`, `BatchReport`, `Inspection`, `JevOutcome`, `PassPolicy`, `Label`, `LabelledOutcome`); `evaluate/` (`EvaluationWriter` new, `LabelledEvaluation`); `inspection/` (`ImageFolder` moved from `batch/`, `Inspector`, `OutputFolder`); `batch/` (`BatchInspection`, `ReportWriter`; `BatchCommand` removed); `jev/` (`OpenRouterJev`, `RetryingJev`, `Sleeper`).
+- **Tests (src/test):** new `ArchitectureRulesTest`, `BatchReportTest`, `EvaluationFiguresTest`, `InspectionTest`, `JevJudgementTest`, `JevOutcomeTest`, `LabelledOutcomeTest`, `PassPolicyTest`, `ThresholdSweepTest`, `SweepRows`, `SleeperTest`, `DetectorLauncherTest`; changed acceptance steps and support, `CliArgumentsTest`, `ErrorFeedbackTest`, `OutputFolderTest`, `RetryingJev*Test`, `OpenRouterJevAdapterTest`; five milestone `.feature` files enabled; `jev/golden-response.json`.
+- **Build, CI, Docker:** `pom.xml` (PIT, failsafe, ArchUnit, cucumber-picocontainer), `.github/workflows/ci.yml`, `Dockerfile`, `.dockerignore`, `scripts/container-check.sh`.
+- **Docs:** `README.md`, `CLAUDE.md`, five slice briefs, `feature-delta.md`, `deliver/roadmap.json`, `deliver/execution-log.json`, `deliver/.develop-progress.json`.
+
+## Wave: DELIVER / [REF] Scenarios green count
+
+- 76 DISTILL scenarios plus the walking skeleton, all enabled, none pending.
+- Latest `./mvnw clean verify` (2026-11-09): 653 unit tests + 89 integration/acceptance tests, 0 failures.
+- 10 `@container` scenarios green via `scripts/container-check.sh` (outside `verify`, Q4).
+
+## Wave: DELIVER / [REF] DoD check
+
+| # | DoD item | Result | Evidence |
+|---|---|---|---|
+| 1 | UAT scenarios executable and green | Pass | 742 tests green; US-04 via `container-check.sh`, 10 scenarios green |
+| 2 | Production-data AC run on real MVTec AD | Pass | Slice briefs; demo 2026-11-09 below |
+| 3 | INV-1..INV-6 asserted | Pass | Acceptance scenarios, Mandate 8 assertions in `DetectorRun`, Ctrl-C 130 and kill -9 137 runs |
+| 4 | Jev stubbed in CI; one real smoke per adapter | Pass | WireMock in `verify`; real smokes in slice briefs |
+| 5 | Console, report.md, report.json consistent | Pass | Same-count assertions in acceptance; container parity (K4) |
+| 6 | README shows the story commands | Pass | `README.md` (110 lines), DEVOPS demo commands incl. guard, `mkdir -p out`, `--user` |
+| 7 | No secret committed, logged or packaged | Pass | 601d632 (refusal and `Jev.toString` no longer echo secrets); K4 image scan PASS; refusal hand run with unchanged usage |
+| 8 | Reviewed and refactored; `domain/` framework-free | Pass | Refactor 00fb855, a071806; review revision ae8d097..020c85e; ArchUnit rules |
+| 9 | Demoable in one session | Pass | Demo evidence below |
+
+## Wave: DELIVER / [REF] Demo evidence
+
+Date 2026-11-09, real Jev. OpenRouter usage 0.09781 -> 0.13814 across these demos.
+
+- **US-01/02:** `java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --evaluate --input=images --output=out/demo-20261109/eval` -> `Evaluated 253 labelled images at pass threshold 0.87: 0 false passes, good auto-pass 73/213 (34.3 %), defects not passed 40/40, Jev cost $0.03724 -> out/demo-20261109/eval/evaluation.md`; exit 0; "Lowest threshold with 0 false passes: 0.86".
+- **US-03:** batch on 40 images -> `Inspected 40 images: 11 PASS, 8 SCRAP, 21 REVIEW (REVIEW share 52.5 %; 0 Jev errors in REVIEW), Jev cost $0.00589`; exit 0.
+- **US-05:** `--input=out/demo-20261109/shift-2026-10-31` -> `Input folder does not exist: out/demo-20261109/shift-2026-10-31`; exit 1; no cost.
+- **US-04:** `docker run --rm --user "$(id -u):$(id -g)" --env-file .env -v …:/in:ro -v …:/out damage-detector:0.1.0 --input=/in --output=/out` on the same 40 -> `Inspected 40 images: 12 PASS, 9 SCRAP, 19 REVIEW … Jev cost $0.00589 -> /out/report.md`; exit 0; output owned by the host user.
+- Per-slice evidence (network-loss run, kill -9 -> 137, Ctrl-C in Docker -> 130, refusal hand run with unchanged usage, rollback drill): `slices/`.
+
+## Wave: DELIVER / [REF] Quality gates
+
+- Roadmap validated and reviewed (conditionally approved, fixes applied).
+- 14/14 steps COMMIT/PASS; `des-verify-integrity` exit 0.
+- Refactor pass: 00fb855, a071806.
+- Adversarial review: rejected (4 blockers, test and log side). One revision pass (ae8d097..020c85e); B3 documented, not fixed.
+- PIT 95 % (246/259) on the agreed scope: domain, `jev/`, `cli/` logic, `OutputFolder`. Cucumber-only classes are out of scope by user decision (2026-11-06). Gate >= 80 %.
+
+## Wave: DELIVER / [REF] Pre-requisites
+
+- JDK 21, Maven wrapper, Docker for `scripts/container-check.sh` and the US-04 demo.
+- `.env` with `OPENROUTER_API_KEY` for real runs; never committed.
+- No git remote yet: `.github/workflows/ci.yml` has not run on GitHub; Dependabot alerts to be enabled when the remote exists.
+
+## Wave: DELIVER / [WHY] Upstream Issues and deviations
+
+- (a) **User decision:** default pass threshold raised 0.86 -> 0.87 after the slice-02 sweep (commit a3c3463), outside a roadmap step.
+- (b) The start-up failure "See log" fix (00fb855) and the review revision commits ae8d097..020c85e were done after the 14 roadmap steps, outside DES step logging.
+- (c) **Review finding B3:** in steps 03-01, 04-02, 04-03, 05-01, 05-02, 06-01, 06-02 the crafters logged RED/GREEN/COMMIT at commit time, so the log does not evidence phase order (crafter reports state RED was observed). Not back-filled.
+- (d) A `RetryingJevAttemptLoopTest` model defect was found in 04-01 and fixed by the acceptance designer.
+- (e) Jev run-to-run variance: good auto-pass at 0.86 was 99 and 96 of 213; at 0.87 it was 73/213 in the final demo against 81 in the sweep run.
+- (f) jqwik removed (the maintainer asks AI agents not to use it); JUnit parameterized tables replace it.
+- (g) Rigor profile switched to custom (Sonnet crafters, Haiku reviewers, mutation on) from step 03-01.
