@@ -1,8 +1,9 @@
-// SCAFFOLD: true
 package de.aboutlabs.damagedetector.domain;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.TreeSet;
+import java.util.stream.IntStream;
 
 /** Pure metrics over one Jev pass at the configured threshold (DDD-4). */
 public final class Evaluation {
@@ -10,6 +11,10 @@ public final class Evaluation {
     /** One row of the per-class table. "Not passed" is the recall of DDD-16. */
     public record ClassRow(Label label, int images, int notPassed, int suspectedCorrect, int passed) {
     }
+
+    private static final int SWEEP_FIRST_HUNDREDTH = 50;
+    private static final int SWEEP_LAST_HUNDREDTH = 99;
+    static final double SWEEP_LAST = SWEEP_LAST_HUNDREDTH / 100.0;
 
     private final List<LabelledOutcome> outcomes;
     private final PassPolicy policy;
@@ -81,8 +86,17 @@ public final class Evaluation {
         return outcomes.stream().anyMatch(outcome -> outcome.outcome().hadFailedAttempt());
     }
 
+    /** Every hundredth from 0.50 to 0.99 plus the configured threshold, recomputed from the stored outcomes. */
     public ThresholdSweep sweep() {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        TreeSet<Double> thresholds = new TreeSet<>();
+        IntStream.rangeClosed(SWEEP_FIRST_HUNDREDTH, SWEEP_LAST_HUNDREDTH).forEach(hundredths -> thresholds.add(hundredths / 100.0));
+        thresholds.add(passThreshold());
+        return ThresholdSweep.of(thresholds.stream().map(this::sweepRowAt).toList());
+    }
+
+    private ThresholdSweep.Row sweepRowAt(double threshold) {
+        Evaluation atThreshold = of(outcomes, threshold);
+        return new ThresholdSweep.Row(threshold, atThreshold.falsePasses(), atThreshold.goodPassed(), atThreshold.goodCount());
     }
 
     private ClassRow rowOf(Label label) {

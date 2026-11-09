@@ -34,7 +34,12 @@ java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --evaluate --input=images --
 The first sub-folder of each image is its label: `good`, `bent_lead`, `cut_lead`, `damaged_case` or `misplaced`.
 Images without a label are skipped and counted, and they are not sent to Jev. The label is used only for scoring. It is
 never sent to Jev. The run writes `evaluation.md` and `evaluation.json`: false passes, the good auto-pass rate, a
-per-class table, the run date, the Jev cost and the elapsed seconds. A rerun into the same folder replaces both files.
+per-class table, a threshold sweep, the run date, the Jev cost and the elapsed seconds. A rerun into the same folder replaces both files.
+
+The sweep shows, for every threshold from 0.50 to 0.99, the false passes and the good parts that pass automatically.
+It is recomputed from the same Jev answers, so it costs no extra Jev calls. `evaluation.md` shows 0.80 to 0.95 and the
+configured threshold, and names the lowest threshold with 0 false passes. `evaluation.json` holds every threshold. The
+tool never changes the threshold: you decide.
 
 To use a different pass threshold, add `--detector.pass-threshold=0.90`.
 

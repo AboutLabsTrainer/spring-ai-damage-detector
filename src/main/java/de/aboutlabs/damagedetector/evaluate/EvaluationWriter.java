@@ -5,6 +5,7 @@ import de.aboutlabs.damagedetector.domain.Inspection;
 import de.aboutlabs.damagedetector.domain.JevOutcome;
 import de.aboutlabs.damagedetector.domain.LabelledOutcome;
 import de.aboutlabs.damagedetector.domain.PassPolicy;
+import de.aboutlabs.damagedetector.domain.ThresholdSweep;
 import de.aboutlabs.damagedetector.domain.Verdict;
 import de.aboutlabs.damagedetector.inspection.OutputFolder;
 import java.time.Duration;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.OptionalDouble;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -25,6 +27,10 @@ public class EvaluationWriter {
     private static final String DISCLOSURE = "The defect images were in the SPIKE sample, so the defect side shows "
         + "reproducibility and is not held-out validation. Jev results can differ from run to run.";
     private static final String ATTRIBUTION = "Sample data: MVTec AD \"transistor\", CC BY-NC-SA 4.0, non-commercial use";
+
+    private static final double READABLE_FIRST = 0.80;
+    private static final double READABLE_LAST = 0.95;
+    private static final double TOLERANCE = 1e-9;
 
     /** What the run knows beyond the scored outcomes: images without a label, the run date and the wall time. */
     public record RunFacts(int skipped, LocalDate runDate, Duration elapsed) {
@@ -69,8 +75,14 @@ public class EvaluationWriter {
             .toList();
         PassPolicy policy = new PassPolicy(evaluation.passThreshold());
         List<JsonImage> images = evaluation.outcomes().stream().map(outcome -> toJson(outcome, policy)).toList();
+        ThresholdSweep sweep = evaluation.sweep();
+        OptionalDouble lowestSafe = sweep.lowestSafeThreshold();
+        List<JsonSweepRow> sweepRows = sweep.rows().stream()
+            .map(row -> new JsonSweepRow(row.threshold(), row.falsePasses(), row.goodPassed(), row.goodCount()))
+            .toList();
         return new JsonEvaluation(facts.runDate().toString(), evaluation.passThreshold(), evaluation.jevCost(),
-            evaluation.costIsLowerBound(), facts.elapsedSeconds(), summary, classes, falsePasses, images);
+            evaluation.costIsLowerBound(), facts.elapsedSeconds(), summary, classes, falsePasses,
+            lowestSafe.isPresent() ? lowestSafe.getAsDouble() : null, sweepRows, images);
     }
 
     private static JsonImage toJson(LabelledOutcome outcome, PassPolicy policy) {
@@ -99,6 +111,7 @@ public class EvaluationWriter {
             evaluation.costIsLowerBound() ? " (lower bound: failed attempts are not counted)" : "", facts.elapsedSeconds()));
         appendFalsePasses(md, evaluation);
         appendClassTable(md, evaluation);
+        appendSweep(md, evaluation);
         md.append("## Evidence notes\n\n").append(DISCLOSURE).append("\n\n");
         return md.append(ATTRIBUTION).append('\n').toString();
     }
@@ -121,13 +134,37 @@ public class EvaluationWriter {
         md.append('\n');
     }
 
+    private static void appendSweep(StringBuilder md, Evaluation evaluation) {
+        ThresholdSweep sweep = evaluation.sweep();
+        md.append("## Threshold sweep\n\n");
+        md.append("| Threshold | False passes | Good auto-pass |\n|---|---|---|\n");
+        sweep.rows().stream().filter(row -> isReadable(row, evaluation)).forEach(row -> md.append(format("| %s | %d | %d/%d |\n",
+            thresholdText(row.threshold()), row.falsePasses(), row.goodPassed(), row.goodCount())));
+        md.append('\n');
+        OptionalDouble lowestSafe = sweep.lowestSafeThreshold();
+        md.append(lowestSafe.isPresent()
+            ? "Lowest threshold with 0 false passes: " + thresholdText(lowestSafe.getAsDouble())
+            : "No threshold up to 0.99 reaches 0 false passes; route every GOOD to REVIEW").append("\n\n");
+    }
+
+    private static boolean isReadable(ThresholdSweep.Row row, Evaluation evaluation) {
+        return row.threshold() == evaluation.passThreshold()
+            || (row.threshold() >= READABLE_FIRST - TOLERANCE && row.threshold() <= READABLE_LAST + TOLERANCE);
+    }
+
+    /** Two decimals, or the full value for an off-grid threshold such as 0.875. */
+    private static String thresholdText(double threshold) {
+        boolean onGrid = Math.abs(threshold * 100 - Math.round(threshold * 100)) < TOLERANCE;
+        return onGrid ? format("%.2f", threshold) : Double.toString(threshold);
+    }
+
     private static String format(String pattern, Object... args) {
         return String.format(Locale.ROOT, pattern, args);
     }
 
     record JsonEvaluation(String runDate, double passThreshold, double jevCost, boolean costIsLowerBound, double elapsedSeconds,
                           JsonSummary summary, List<JsonClass> classes, List<JsonFalsePass> falsePassImages,
-                          List<JsonImage> images) {
+                          Double lowestSafeThreshold, List<JsonSweepRow> sweep, List<JsonImage> images) {
     }
 
     record JsonSummary(int labelled, int skipped, int judged, int jevErrors, int falsePasses, int goodPassed, int goodTotal,
@@ -138,6 +175,9 @@ public class EvaluationWriter {
     }
 
     record JsonFalsePass(String path, double pGood) {
+    }
+
+    record JsonSweepRow(double threshold, int falsePasses, int goodPassed, int goodTotal) {
     }
 
     record JsonImage(String path, String label, Verdict verdict, String description, boolean jevError, String jevChoice,

@@ -32,4 +32,30 @@ The evaluation shows, for every threshold from 0.50 to 0.99, the false passes an
 Same day: Jonas reads the sweep from the slice-01 run and sets `detector.pass-threshold` for the demo.
 
 ## Evidence / decision (fill after the run)
-- Lowest safe threshold: _pending_ · Decision: _pending_
+- Run date: 2026-11-09. Command: `java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --evaluate --input=images --output=out/eval-sweep-2026-11-09`, exit 0 (output folder is gitignored).
+- Summary line: `Evaluated 253 labelled images at pass threshold 0.86: 0 false passes, good auto-pass 96/213 (45.1 %), defects not passed 40/40, Jev cost $0.03724 -> out/eval-sweep-2026-11-09/evaluation.md`
+- Jev cost: $0.03724, 0 Jev errors, 253 judged. Elapsed: 166.2 s. Jev results differ from run to run: the earlier slice-01 run auto-passed 99/213 at 0.86, this run 96/213.
+- Sweep (false passes, good auto-pass of 213):
+
+  | Threshold | False passes | Good auto-pass |
+  |---|---|---|
+  | 0.80 | 2 | 168/213 |
+  | 0.81 | 2 | 162/213 |
+  | 0.82 | 2 | 149/213 |
+  | 0.83 | 2 | 144/213 |
+  | 0.84 | 2 | 132/213 |
+  | 0.85 | 1 | 118/213 |
+  | 0.86 | 0 | 96/213 |
+  | 0.87 | 0 | 81/213 |
+  | 0.88 | 0 | 62/213 |
+  | 0.89 | 0 | 46/213 |
+  | 0.90 | 0 | 36/213 |
+  | 0.91 | 0 | 22/213 |
+  | 0.92 | 0 | 9/213 |
+  | 0.93 | 0 | 4/213 |
+  | 0.94 | 0 | 1/213 |
+  | 0.95 | 0 | 0/213 |
+
+- Lowest threshold with 0 false passes: 0.86 (the configured default); 0.85 still lets 1 defect through.
+- Note: the defect images were in the SPIKE sample, so the defect side shows reproducibility, not held-out validation (D26, Q8).
+- Threshold decision: pending user (orchestrator asks)
