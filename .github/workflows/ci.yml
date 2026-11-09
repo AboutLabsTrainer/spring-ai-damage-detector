@@ -1,6 +1,5 @@
 # CI for GitHub Flow (DEVOPS wave, feature-delta "CI/CD pipeline outline").
 # Jev stays stubbed (WireMock); the workflow references no secret. Actions are pinned by commit SHA.
-# The image job comes with the Dockerfile in slice 04.
 name: ci
 
 on:
@@ -103,3 +102,27 @@ jobs:
           name: pit-report
           path: target/pit-reports/
           if-no-files-found: ignore
+
+  # The Jev stub is WireMock in Docker and no step has a key: the check plants its own canary key.
+  image:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # The check runs the jar it takes out of the image next to the image, so it needs a JDK on the runner.
+      - name: Set up Temurin 21
+        uses: actions/setup-java@77dd5b2ce225ea11469928ac317850245a74ae78 # v6.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Prove the key scan on deliberately bad images
+        run: scripts/container-check.sh --self-test
+
+      - name: Build the image and run every container check
+        run: scripts/container-check.sh
