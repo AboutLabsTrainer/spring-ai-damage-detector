@@ -41,5 +41,18 @@ Same day: Jonas runs it on `images/` and decides whether the showcase may state 
 None needed. The request shape and cost are known from the SPIKE.
 
 ## Evidence (fill after the run)
-- Run date / summary line / per-class table: _pending_
+- Run date: 2026-11-09. Command: `java -jar target/damage-detector-0.1.0-SNAPSHOT.jar --evaluate --input=images --output=out/eval-2026-11-09`, exit 0.
+- Summary line: `Evaluated 253 labelled images at pass threshold 0.86: 0 false passes, good auto-pass 99/213 (46.5 %), defects not passed 40/40, Jev cost $0.03724 -> out/eval-2026-11-09/evaluation.md`
+- Jev cost: $0.03724 (not a lower bound: 0 Jev errors, 253 judged, 0 skipped). Elapsed: 162.7 s.
+- Per-class table:
+
+  | Class | Images | Not passed | Suspected class correct | Passed |
+  |---|---|---|---|---|
+  | bent_lead | 10 | 10 | 4 | 0 |
+  | cut_lead | 10 | 10 | 6 | 0 |
+  | damaged_case | 10 | 10 | 5 | 0 |
+  | misplaced | 10 | 10 | 5 | 0 |
+
+- Margin: the highest P(GOOD) of a defect was 0.85 (damaged_case/002.png), 0.01 below the threshold, the same margin as in the SPIKE.
+- Golden Jev response recorded the same day from one raw call on good/000.png: `src/test/resources/jev/golden-response.json`.
 - Note when citing these numbers: all 40 defect images were in the SPIKE sample, so a 0 false-pass result shows reproducibility, not held-out validation. Only the 187 good images the SPIKE never used are new evidence (D26, Q8).

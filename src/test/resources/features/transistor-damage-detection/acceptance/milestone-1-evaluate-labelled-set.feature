@@ -152,7 +152,7 @@ Feature: See whether any defect passes on the labelled images
 
   Rule: The evaluation is honest evidence
 
-    @pending @US-01 @driving_adapter @real-io @adapter-integration @contract-shape:bounded-change
+    @US-01 @driving_adapter @real-io @adapter-integration @contract-shape:bounded-change
     Scenario: Evaluation result can be read from the command line
       Given a labelled folder with the images good/000.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -162,7 +162,7 @@ Feature: See whether any defect passes on the labelled images
       And nothing is reported as a problem
       And the run ends successfully
 
-    @pending @US-01 @driving_port @real-io @kpi-K5 @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @kpi-K5 @contract-shape:bounded-change
     Scenario: The evaluation keeps its cost and duration as evidence
       Given a labelled folder with the images good/000.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -171,7 +171,7 @@ Feature: See whether any defect passes on the labelled images
       Then the evaluation states a Jev cost of $0.00030
       And the evaluation states how many seconds the run took
 
-    @pending @US-01 @driving_port @real-io @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @contract-shape:bounded-change
     Scenario: The evaluation names its run date
       Given a labelled folder with the images good/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -179,21 +179,21 @@ Feature: See whether any defect passes on the labelled images
       When Jonas runs the evaluation with pass threshold 0.86
       Then the evaluation states the run date 2026-11-06
 
-    @pending @US-01 @driving_port @real-io @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @contract-shape:bounded-change
     Scenario: The evaluation says what its defect images can and cannot prove
       Given a labelled folder with the images good/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
       When Jonas runs the evaluation with pass threshold 0.86
       Then the evaluation says "The defect images were in the SPIKE sample, so the defect side shows reproducibility and is not held-out validation. Jev results can differ from run to run."
 
-    @pending @US-01 @driving_port @real-io @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @contract-shape:bounded-change
     Scenario: The evaluation names the source of the sample data
       Given a labelled folder with the images good/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
       When Jonas runs the evaluation with pass threshold 0.86
       Then the evaluation ends with the attribution "Sample data: MVTec AD \"transistor\", CC BY-NC-SA 4.0, non-commercial use"
 
-    @pending @US-01 @driving_port @real-io @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @contract-shape:bounded-change
     Scenario: Running the evaluation again replaces the earlier record
       Given a labelled folder with the images good/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
