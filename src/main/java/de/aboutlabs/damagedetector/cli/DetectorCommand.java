@@ -52,6 +52,9 @@ class DetectorCommand implements ApplicationRunner, ExitCodeGenerator {
         }
         BatchReport report = batchInspection.run(images, output, passPolicy);
         System.out.println(summaryLine(report, arguments.output()));
+        if (report.judged() == 0) {
+            report(errorFeedback.noImageJudged(report.inspections().size()));
+        }
     }
 
     @Override
@@ -68,6 +71,10 @@ class DetectorCommand implements ApplicationRunner, ExitCodeGenerator {
         }
         Evaluation scored = evaluation.get();
         System.out.println(summaryLine(scored, arguments.output()));
+        if (scored.judged() == 0) {
+            report(errorFeedback.noImageJudged(scored.jevErrors()));
+            return;
+        }
         if (scored.falsePasses() > 0) {
             report(errorFeedback.falsePasses(scored.falsePasses(), scored.passThreshold(), evaluationPath(arguments.output())));
         }

@@ -149,7 +149,7 @@ Feature: The batch finishes even when Jev fails for some images
 
   Rule: Petra is warned when nothing could be judged
 
-    @pending @US-03 @driving_adapter @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_adapter @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario: Petra is warned when no image could be judged
       Given an input folder with the images good/000.png, good/001.png, bent_lead/000.png and misplaced/000.png
       And Jev rejects every call with "401 Unauthorized"
@@ -160,7 +160,7 @@ Feature: The batch finishes even when Jev fails for some images
       And the run ends with the nothing-judged signal
       And the output folder holds only what a completed batch declares
 
-    @pending @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @kpi-K3 @contract-shape:bounded-change
     Scenario: Petra is warned when Jev cannot be reached at all
       Given an input folder with the images good/000.png and good/001.png
       And Jev cannot be reached at all
@@ -169,7 +169,7 @@ Feature: The batch finishes even when Jev fails for some images
       And Petra is told "0 of 2 images judged by Jev - check OPENROUTER_API_KEY and network"
       And the run ends with the nothing-judged signal
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: The evaluation warns when no image could be judged
       Given a labelled folder with the images good/000.png and bent_lead/000.png
       And Jev rejects every call with "401 Unauthorized"
@@ -178,7 +178,7 @@ Feature: The batch finishes even when Jev fails for some images
       And the run ends with the nothing-judged signal
       And the output folder holds only what a completed evaluation declares
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: The evaluation counts a failed image as not passed at every threshold
       Given a labelled folder with the images good/000.png, good/001.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -286,7 +286,7 @@ Feature: The batch finishes even when Jev fails for some images
 
   Rule: An interrupted run leaves no half-written report
 
-    @pending @US-03 @driving_adapter @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_adapter @real-io @error @contract-shape:bounded-change
     Scenario Outline: An interrupted run leaves no finished report
       Given an input folder with the images good/000.png and good/001.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -314,7 +314,7 @@ Feature: The batch finishes even when Jev fails for some images
       And the run ends successfully
       And the output folder holds only what a completed batch declares
 
-    @pending @US-03 @driving_adapter @real-io @error @contract-shape:unbounded-preservation
+    @US-03 @driving_adapter @real-io @error @contract-shape:unbounded-preservation
     Scenario Outline: The API key never shows up in what the detector leaves behind
       Given an input folder with the images good/000.png and bent_lead/000.png
       And the API key is a marked key

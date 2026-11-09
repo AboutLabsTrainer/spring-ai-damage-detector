@@ -50,7 +50,13 @@ To use a different pass threshold, add `--detector.pass-threshold=0.90`.
 | 0 | The run completed. In evaluate mode this also means no defect passed. |
 | 1 | Refused or unexpected error, for example a missing key, an unusable folder or a folder without labels. One line on stderr. |
 | 2 | Evaluate mode: at least one defect passed at the configured pass threshold (a false pass). The reports are written. |
-| 3 | No image could be judged. The reports are written. |
+| 3 | No image could be judged. The reports are written and the line `0 of <n> images judged by Jev - check OPENROUTER_API_KEY and network` is printed. Exit 3 wins over exit 2. |
+| 130 | Interrupted with Ctrl-C. No finished report: there is no `report.md` or `evaluation.md`. |
+| 143 | Interrupted by a stop request (SIGTERM, for example `docker stop`). No finished report. |
+| 137 | Killed (SIGKILL, for example out of memory or `docker kill`). The JVM cannot catch it, so there is no line and no finished report. |
+
+Every report is written whole under its final name, `report.md` (or `evaluation.md`) last. A folder without that summary is
+incomplete. After an interrupted run, rerun into a fresh output folder.
 
 ## Sample data
 

@@ -42,4 +42,10 @@ A transient Jev failure is retried with increasing waits. If the tool gives up, 
 Same day: Petra-style run on 10 real images with the network switched off for about 10 s.
 
 ## Evidence (fill after the run)
-- Summary line: _pending_
+- Date: 2026-11-09. Real jar, 10 images copied (renamed) from `images/` (5 good, 1 bent_lead, 1 cut_lead, 1 damaged_case, 2 misplaced), real Jev through a local forwarding proxy; output under `out/` (not committed).
+- Network loss: simulated at the local proxy (it was stopped for about 10 s mid-run, so the jar got "connection refused"), not at the host network.
+- Summary line: `Inspected 10 images: 2 PASS, 1 SCRAP, 7 REVIEW (REVIEW share 70.0 %; 3 Jev errors in REVIEW), Jev cost $0.00103 (lower bound) -> out/slice03-run/report.md`. Exit 0, report.md and report.json written, the 3 errors read `Jev call failed after 3 attempts: connection error`.
+- Cost: $0.00103 for this run (lower bound). Earlier trial runs, where the proxy only closed connections, were absorbed by the JDK client's own reconnects (0 Jev errors) and cost about $0.0015 each.
+- The API key appears nowhere in the report, the log, stdout or stderr of this run.
+- Exit 137 (manual `kill -9` on the real jar during a stalled Jev call, 8 s in): the process ended with 137 and the output folder held only `damage-detector.log`: no report.json, no report.md.
+- Note: the 3 errors out of 10 are 30 %, above the 20 % hypothesis line, but the outage covered a third of the run by design.

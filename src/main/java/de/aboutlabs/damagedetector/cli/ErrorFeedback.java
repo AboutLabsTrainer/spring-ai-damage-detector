@@ -12,6 +12,8 @@ public class ErrorFeedback {
 
     private static final int REFUSED = 1;
     private static final int FALSE_PASS = 2;
+    private static final int NOTHING_JUDGED = 3;
+    private static final int COMPLETED = 0;
 
     public Feedback feedbackFor(ProbeResult.Refused refusal) {
         return switch (refusal.reason()) {
@@ -37,11 +39,14 @@ public class ErrorFeedback {
     }
 
     public Feedback noImageJudged(int total) {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        return new Feedback("0 of " + total + " images judged by Jev - check OPENROUTER_API_KEY and network", NOTHING_JUDGED);
     }
 
     /** Exit code of a completed run; precedence 3 over 2 (exit 1 never reaches this point). */
     public int exitCodeOfCompletedRun(int judged, int falsePasses) {
-        throw new AssertionError("Not yet implemented -- RED scaffold");
+        if (judged == 0) {
+            return NOTHING_JUDGED;
+        }
+        return falsePasses > 0 ? FALSE_PASS : COMPLETED;
     }
 }

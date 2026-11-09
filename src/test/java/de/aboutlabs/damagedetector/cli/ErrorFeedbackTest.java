@@ -96,14 +96,12 @@ class ErrorFeedbackTest {
             .isEqualTo(new Feedback("1 false passes at pass threshold 0.86: see out/eval/evaluation.md", 2));
     }
 
-    @Disabled("pending: slice 03, the exit-3 line (ADR-005, DDD-33)")
     @Test
     void no_image_judged_names_the_key_and_the_network() {
         assertThat(feedback.noImageJudged(4))
             .isEqualTo(new Feedback("0 of 4 images judged by Jev - check OPENROUTER_API_KEY and network", 3));
     }
 
-    @Disabled("pending: slice 03, the exit-3 line (ADR-005, DDD-33)")
     @ParameterizedTest
     @CsvSource({
         "4, 0, 0",

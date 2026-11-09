@@ -88,7 +88,6 @@ class OutputFolderTest {
         assertThatThrownBy(() -> output.writeBytes(path, new byte[] {1})).isInstanceOf(IllegalArgumentException.class);
     }
 
-    @Disabled("pending: slice 03, atomic writes (DDD-34)")
     @Test
     void a_write_leaves_no_temp_file() throws IOException {
         OutputFolder.rootedAt(temp.resolve("out")).writeString("report.md", "done");
@@ -98,7 +97,6 @@ class OutputFolderTest {
         }
     }
 
-    @Disabled("pending: slice 03, atomic writes (DDD-34)")
     @Test
     void a_failed_write_deletes_its_temp_file() throws IOException {
         Path root = Files.createDirectory(temp.resolve("out"));
@@ -111,7 +109,6 @@ class OutputFolderTest {
         assertThat(root.resolve("report.json.tmp")).doesNotExist();
     }
 
-    @Disabled("pending: slice 03, atomic writes (DDD-34)")
     @Test
     void a_failed_replacement_leaves_the_old_file_whole() throws IOException {
         assumeNotRoot();
