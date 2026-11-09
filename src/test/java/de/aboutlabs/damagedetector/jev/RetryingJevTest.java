@@ -25,7 +25,6 @@ class RetryingJevTest {
 
     private final JevAdapterFixture fixture = new JevAdapterFixture();
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @Test
     void waits_double_from_the_initial_backoff() {
         fixture.jev.expect(times(4), requestTo(DECISIONS_URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
@@ -35,7 +34,6 @@ class RetryingJevTest {
         assertThat(fixture.waits).containsExactly(seconds(1), seconds(2), seconds(4));
     }
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @Test
     void waits_stop_growing_at_the_maximum_backoff() {
         fixture.jev.expect(times(6), requestTo(DECISIONS_URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
@@ -45,7 +43,6 @@ class RetryingJevTest {
         assertThat(fixture.waits).containsExactly(seconds(1), seconds(2), seconds(4), seconds(8), seconds(10));
     }
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @Test
     void there_is_no_wait_after_the_last_attempt() {
         fixture.jev.expect(once(), requestTo(DECISIONS_URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
@@ -77,7 +74,6 @@ class RetryingJevTest {
             judged -> assertThat(judged.attempts()).isEqualTo(1));
     }
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @ParameterizedTest
     @ValueSource(strings = {"soon", "1.5", "-4", "Wed, 21 Oct 2026 07:28:00 GMT"})
     void a_retry_after_that_is_no_whole_number_of_seconds_is_ignored(String retryAfter) {
@@ -91,7 +87,6 @@ class RetryingJevTest {
         assertThat(fixture.waits).containsExactly(seconds(1));
     }
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @ParameterizedTest
     @ValueSource(ints = {0, 4, 10})
     void a_retry_after_within_the_cap_replaces_the_backoff(int retryAfter) {
@@ -105,7 +100,6 @@ class RetryingJevTest {
         assertThat(fixture.waits).isEqualTo(List.of(seconds(retryAfter)));
     }
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @Test
     void a_retry_after_above_the_cap_gives_up_at_once() {
         fixture.jev.expect(once(), requestTo(DECISIONS_URL))
@@ -119,7 +113,6 @@ class RetryingJevTest {
         fixture.jev.verify();
     }
 
-    @Disabled("pending: step 04-02, backoff schedule and Retry-After (ADR-004, DDD-5, DDD-7)")
     @Test
     void the_attempt_count_of_a_late_give_up_is_the_real_one() {
         fixture.jev.expect(once(), requestTo(DECISIONS_URL)).andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));

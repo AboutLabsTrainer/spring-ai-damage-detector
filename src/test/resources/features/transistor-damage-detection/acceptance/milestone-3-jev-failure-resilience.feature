@@ -194,14 +194,14 @@ Feature: The batch finishes even when Jev fails for some images
 
   Rule: Waits grow, stop at the longest allowed wait and respect Jev's own request
 
-    @pending @US-03 @driving_port @real-io @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @contract-shape:bounded-change
     Scenario: The waits between attempts grow
       Given an input folder with the images good/000.png
       And Jev fails with "503 Service Unavailable" on every attempt for good/000.png
       When Petra runs the batch inspection
       Then the waits between attempts were 1 s, 2 s
 
-    @pending @US-03 @driving_port @real-io @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @contract-shape:bounded-change
     Scenario: The waits stop growing at the longest allowed wait
       Given an input folder with the images good/000.png
       And Jev fails with "503 Service Unavailable" on every attempt for good/000.png
@@ -209,7 +209,7 @@ Feature: The batch finishes even when Jev fails for some images
       When Petra runs the batch inspection
       Then the waits between attempts were 1 s, 2 s, 4 s, 8 s, 10 s
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario Outline: The number of attempts is configurable
       Given an input folder with the images good/000.png
       And Jev fails with "503 Service Unavailable" on every attempt for good/000.png
@@ -224,7 +224,7 @@ Feature: The batch finishes even when Jev fails for some images
         | 2        | 2 attempts |
         | 5        | 5 attempts |
 
-    @pending @US-03 @driving_port @real-io @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @contract-shape:bounded-change
     Scenario Outline: Jev's own request to wait is honoured up to the longest allowed wait
       Given an input folder with the images bent_lead/000.png
       And Jev asks to wait <seconds> s with "429 Too Many Requests" and then judges bent_lead/000.png BENT_LEAD
@@ -237,7 +237,7 @@ Feature: The batch finishes even when Jev fails for some images
         | 4       |
         | 10      |
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: A request to wait longer than allowed ends the attempts at once
       Given an input folder with the images good/042.png and good/043.png
       And Jev asks to wait 120 s with "429 Too Many Requests" on every attempt for good/042.png
@@ -250,7 +250,7 @@ Feature: The batch finishes even when Jev fails for some images
 
   Rule: The cost is exact only when no attempt failed
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: After a failed image the cost is shown as a lower bound
       Given an input folder with the images good/000.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -259,7 +259,7 @@ Feature: The batch finishes even when Jev fails for some images
       Then the reported Jev cost is $0.00010
       And the cost is shown as a lower bound
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: A success after a failed attempt also shows the cost as a lower bound
       Given an input folder with the images bent_lead/003.png
       And Jev fails once with "503 Service Unavailable" and then judges bent_lead/003.png BENT_LEAD
@@ -267,7 +267,7 @@ Feature: The batch finishes even when Jev fails for some images
       Then the reported Jev cost is $0.00020
       And the cost is shown as a lower bound
 
-    @pending @US-03 @driving_port @real-io @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @contract-shape:bounded-change
     Scenario: Without failed attempts the cost is exact
       Given an input folder with the images good/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -276,7 +276,7 @@ Feature: The batch finishes even when Jev fails for some images
       And the reported Jev cost is $0.00010
       And the cost is not shown as a lower bound
 
-    @pending @US-03 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-03 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario: After failed attempts the evaluation shows its cost as a lower bound
       Given a labelled folder with the images good/000.png and bent_lead/000.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91

@@ -63,7 +63,7 @@ public class OpenRouterJev implements AttemptSource {
         try {
             return toResult(post(image, mediaType));
         } catch (RestClientResponseException e) {
-            return failedWithStatus(e.getStatusCode().value(), e.getStatusText());
+            return failedWithStatus(e.getStatusCode().value(), e.getStatusText(), retryAfterOf(e));
         } catch (ResourceAccessException e) {
             return failedToConnectOrTimedOut(e);
         } catch (RestClientException | HttpMessageNotReadableException e) {
@@ -96,11 +96,20 @@ public class OpenRouterJev implements AttemptSource {
             .body(DecisionResponse.class);
     }
 
-    private static AttemptResult failedWithStatus(int status, String statusText) {
+    private static AttemptResult failedWithStatus(int status, String statusText, Optional<Duration> retryAfter) {
         HttpStatus known = HttpStatus.resolve(status);
         String reason = "HTTP " + status + " " + (known == null ? statusText : known.getReasonPhrase());
         boolean transientStatus = status == 408 || status == 429 || status >= 500;
-        return transientStatus ? new AttemptResult.Transient(reason, Optional.empty()) : new AttemptResult.Permanent(reason);
+        return transientStatus ? new AttemptResult.Transient(reason, retryAfter) : new AttemptResult.Permanent(reason);
+    }
+
+    /** Only a whole, non-negative number of seconds is usable; an HTTP date or anything else is ignored (DDD-7). */
+    private static Optional<Duration> retryAfterOf(RestClientResponseException e) {
+        String value = e.getResponseHeaders() == null ? null : e.getResponseHeaders().getFirst("Retry-After");
+        if (value == null || !value.matches("\\d{1,9}")) {
+            return Optional.empty();
+        }
+        return Optional.of(Duration.ofSeconds(Long.parseLong(value)));
     }
 
     private AttemptResult failedToConnectOrTimedOut(ResourceAccessException e) {

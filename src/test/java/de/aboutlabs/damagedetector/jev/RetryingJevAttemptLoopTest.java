@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -64,7 +63,6 @@ class RetryingJevAttemptLoopTest {
         assertThat(attempts).isEqualTo(expectedAttempts);
     }
 
-    @Disabled("pending: step 04-02, backoff schedule (ADR-004, DDD-5)")
     @ParameterizedTest
     @ValueSource(ints = {1, 2, 3, 5, 8})
     void every_retry_is_preceded_by_one_wait_that_never_shrinks_or_exceeds_the_cap(int maxAttempts) {

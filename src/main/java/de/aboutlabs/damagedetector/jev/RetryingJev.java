@@ -39,11 +39,26 @@ public class RetryingJev implements Jev, Probe {
                 return new JevOutcome.Judged(answered.judgement(), attempt);
             }
             if (result instanceof AttemptResult.Transient transientFailure && attempt < maxAttempts) {
-                sleeper.sleep(backoffAfter(attempt));
+                if (exceedsMaxBackoff(transientFailure)) {
+                    return new JevOutcome.Failed(attempt, tooLongRequestReason(transientFailure));
+                }
+                sleeper.sleep(waitBefore(transientFailure, attempt));
                 continue;
             }
             return new JevOutcome.Failed(attempt, reasonOf(result));
         }
+    }
+
+    private Duration waitBefore(AttemptResult.Transient failure, int failedAttempts) {
+        return failure.retryAfter().orElseGet(() -> backoffAfter(failedAttempts));
+    }
+
+    private boolean exceedsMaxBackoff(AttemptResult.Transient failure) {
+        return failure.retryAfter().filter(wait -> wait.compareTo(maxBackoff) > 0).isPresent();
+    }
+
+    private static String tooLongRequestReason(AttemptResult.Transient failure) {
+        return failure.reason() + " (Retry-After " + failure.retryAfter().orElseThrow().toSeconds() + " s exceeds max-backoff)";
     }
 
     private static String reasonOf(AttemptResult result) {
