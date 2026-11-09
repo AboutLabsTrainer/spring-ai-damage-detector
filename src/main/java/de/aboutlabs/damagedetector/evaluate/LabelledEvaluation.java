@@ -12,7 +12,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
 
@@ -46,17 +48,32 @@ public class LabelledEvaluation {
         return Arrays.stream(Label.values()).filter(label -> label.folderName().equals(firstSegment)).findFirst();
     }
 
-    public Evaluation run(ImageFolder images, OutputFolder output, PassPolicy policy) {
+    /**
+     * Scores every labelled image and writes the evaluation. Empty when the folder holds no labelled image: then Jev is
+     * not called and nothing is written (NO_LABELLED_IMAGES, ADR-005).
+     */
+    public Optional<Evaluation> run(ImageFolder images, OutputFolder output, PassPolicy policy) {
         Instant start = clock.instant();
         List<String> paths = images.imagePaths();
-        List<LabelledOutcome> outcomes = paths.stream()
-            .flatMap(image -> labelOf(image).map(label -> inspect(images, image, label, policy)).stream())
+        Map<String, Label> labelled = labelled(paths);
+        if (labelled.isEmpty()) {
+            return Optional.empty();
+        }
+        List<LabelledOutcome> outcomes = labelled.entrySet().stream()
+            .map(entry -> inspect(images, entry.getKey(), entry.getValue(), policy))
             .toList();
         Evaluation evaluation = Evaluation.of(outcomes, policy.passThreshold());
         Instant end = clock.instant();
         writer.write(evaluation, new EvaluationWriter.RunFacts(paths.size() - outcomes.size(),
             LocalDate.ofInstant(start, clock.getZone()), Duration.between(start, end)), output);
-        return evaluation;
+        return Optional.of(evaluation);
+    }
+
+    /** The labelled images in folder order; the label is resolved here and nowhere else. */
+    private static Map<String, Label> labelled(List<String> paths) {
+        Map<String, Label> labelled = new LinkedHashMap<>();
+        paths.forEach(path -> labelOf(path).ifPresent(label -> labelled.put(path, label)));
+        return labelled;
     }
 
     private LabelledOutcome inspect(ImageFolder images, String image, Label label, PassPolicy policy) {

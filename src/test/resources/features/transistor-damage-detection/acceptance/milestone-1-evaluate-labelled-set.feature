@@ -44,7 +44,7 @@ Feature: See whether any defect passes on the labelled images
 
   Rule: A false pass is named and stops a demo script
 
-    @pending @US-01 @driving_adapter @real-io @error @kpi-K1 @contract-shape:bounded-change
+    @US-01 @driving_adapter @real-io @error @kpi-K1 @contract-shape:bounded-change
     Scenario: A defect that passes is named as a false pass
       Given a labelled folder with the images good/000.png and damaged_case/002.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -54,14 +54,14 @@ Feature: See whether any defect passes on the labelled images
       And the evaluation lists damaged_case/002.png as a false pass with P(GOOD) 0.87
       And the run ends with the false-pass signal
 
-    @pending @US-01 @driving_port @real-io @error @kpi-K1 @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @error @kpi-K1 @contract-shape:bounded-change
     Scenario: A false pass is also reported as a problem
       Given a labelled folder with the images damaged_case/002.png
       And Jev judges damaged_case/002.png GOOD with P(GOOD) 0.87
       When Jonas runs the evaluation with pass threshold 0.86
       Then Jonas is told "1 false passes at pass threshold 0.86: see <output>/evaluation.md"
 
-    @pending @US-01 @driving_port @real-io @error @contract-shape:pure-function
+    @US-01 @driving_port @real-io @error @contract-shape:pure-function
     Scenario Outline: The false-pass line sits exactly at the pass threshold
       Given a labelled folder with the images good/000.png and damaged_case/002.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -77,7 +77,7 @@ Feature: See whether any defect passes on the labelled images
         | 0.86   | 1            | PASS    | with the false-pass signal |
         | 0.87   | 1            | PASS    | with the false-pass signal |
 
-    @pending @US-01 @driving_port @real-io @error @contract-shape:pure-function
+    @US-01 @driving_port @real-io @error @contract-shape:pure-function
     Scenario: The class table separates recall from the suspected class
       Given a labelled folder with the images misplaced/000.png, misplaced/001.png and misplaced/002.png
       And Jev judges misplaced/000.png MISPLACED
@@ -89,7 +89,7 @@ Feature: See whether any defect passes on the labelled images
 
   Rule: Labels score the run and never reach Jev
 
-    @pending @US-01 @driving_port @real-io @kpi-G1 @contract-shape:unbounded-preservation
+    @US-01 @driving_port @real-io @kpi-G1 @contract-shape:unbounded-preservation
     Scenario: Folder names are only used for scoring
       Given a labelled folder with the images damaged_case/002.png, good/017.png and misplaced/006.png
       And Jev judges damaged_case/002.png DAMAGED_CASE
@@ -100,7 +100,7 @@ Feature: See whether any defect passes on the labelled images
       And apart from the image data every request to Jev is identical
       And the evaluation lists 3 images
 
-    @pending @US-01 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario Outline: An image without a label is skipped, counted and not sent to Jev
       Given a labelled folder with the images good/000.png and <unlabelled>
       And Jev judges good/000.png GOOD with P(GOOD) 0.91
@@ -125,7 +125,7 @@ Feature: See whether any defect passes on the labelled images
       Then the evaluation shows good auto-pass 1 of 1
       And the evaluation shows recall 1 of 1 for cut_lead
 
-    @pending @US-01 @driving_port @real-io @error @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @error @contract-shape:bounded-change
     Scenario Outline: A folder without labels is refused before any cost
       Given a folder that holds <content>
       When Jonas runs the evaluation with pass threshold 0.86

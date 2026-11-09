@@ -16,7 +16,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Closed error set of INV-5: every refusal has its line and exit 1. */
-@Disabled("pending: slice 05, ErrorFeedback; slices 01 and 03 need its exit-2 and exit-3 lines (ADR-005, DDD-33)")
 class ErrorFeedbackTest {
 
     private final ErrorFeedback feedback = new ErrorFeedback();
@@ -44,12 +43,14 @@ class ErrorFeedbackTest {
                 "Pass threshold must be a number from 0 to 1: set detector.pass-threshold (was abc)"));
     }
 
+    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @ParameterizedTest
     @MethodSource("refusals")
     void every_refusal_gives_its_line_and_exit_1(Reason reason, List<String> details, String line) {
         assertThat(feedback.feedbackFor(new Refused(reason, details))).isEqualTo(new Feedback(line, 1));
     }
 
+    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void every_refusal_reason_has_a_line() {
         for (Reason reason : Reason.values()) {
@@ -59,23 +60,27 @@ class ErrorFeedbackTest {
         }
     }
 
+    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void an_unexpected_exception_points_to_the_log() {
         assertThat(feedback.feedbackFor(new IllegalStateException("disk full")))
             .isEqualTo(new Feedback("Inspection failed: disk full. See log for details.", 1));
     }
 
+    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void an_exception_without_a_message_is_named_by_its_type() {
         assertThat(feedback.feedbackFor(new IllegalStateException()).line()).contains("IllegalStateException");
     }
 
+    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @Test
     void before_the_log_exists_the_line_does_not_point_to_it() {
         assertThat(feedback.feedbackBeforeLog(new IllegalStateException("disk full")))
             .isEqualTo(new Feedback("Inspection failed: disk full.", 1));
     }
 
+    @Disabled("pending: slice 05, ErrorFeedback (ADR-005, DDD-33)")
     @ParameterizedTest
     @ValueSource(strings = {"first\n\tat second", "first\r\nsecond", "first\n"})
     void only_the_first_line_of_a_cause_is_shown(String message) {
@@ -91,12 +96,14 @@ class ErrorFeedbackTest {
             .isEqualTo(new Feedback("1 false passes at pass threshold 0.86: see out/eval/evaluation.md", 2));
     }
 
+    @Disabled("pending: slice 03, the exit-3 line (ADR-005, DDD-33)")
     @Test
     void no_image_judged_names_the_key_and_the_network() {
         assertThat(feedback.noImageJudged(4))
             .isEqualTo(new Feedback("0 of 4 images judged by Jev - check OPENROUTER_API_KEY and network", 3));
     }
 
+    @Disabled("pending: slice 03, the exit-3 line (ADR-005, DDD-33)")
     @ParameterizedTest
     @CsvSource({
         "4, 0, 0",
