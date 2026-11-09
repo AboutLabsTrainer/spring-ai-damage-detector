@@ -3,13 +3,11 @@ package de.aboutlabs.damagedetector.evaluate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.aboutlabs.damagedetector.domain.Label;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 /** Label resolution is a pure function of the relative path (DDD-13). */
-@Disabled("pending: slice 01, LabelledEvaluation (DDD-3, DDD-13)")
 class LabelResolutionTest {
 
     @ParameterizedTest

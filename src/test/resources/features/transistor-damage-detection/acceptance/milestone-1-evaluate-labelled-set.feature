@@ -15,29 +15,29 @@ Feature: See whether any defect passes on the labelled images
       And Jev judges bent_lead/000.png CUT_LEAD
       And Jev judges misplaced/000.png GOOD with P(GOOD) 0.45
 
-    @pending @US-01 @driving_port @real-io @kpi-K1 @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @kpi-K1 @contract-shape:bounded-change
     Scenario: Presenter sees zero false passes on the labelled set
       When Jonas runs the evaluation with pass threshold 0.86
       Then the evaluation shows 0 false passes
       And the run ends successfully
 
-    @pending @US-01 @driving_port @real-io @kpi-K2 @contract-shape:pure-function
+    @US-01 @driving_port @real-io @kpi-K2 @contract-shape:pure-function
     Scenario: Presenter sees how many good parts pass automatically
       When Jonas runs the evaluation with pass threshold 0.86
       Then the evaluation shows good auto-pass 1 of 2
 
-    @pending @US-01 @driving_port @real-io @contract-shape:pure-function
+    @US-01 @driving_port @real-io @contract-shape:pure-function
     Scenario: Presenter sees the recall of each defect class
       When Jonas runs the evaluation with pass threshold 0.86
       Then the evaluation shows recall 1 of 1 for bent_lead
       And the evaluation shows recall 1 of 1 for misplaced
 
-    @pending @US-01 @driving_port @real-io @contract-shape:pure-function
+    @US-01 @driving_port @real-io @contract-shape:pure-function
     Scenario: A wrong suspected class does not count as correct
       When Jonas runs the evaluation with pass threshold 0.86
       Then the suspected class of bent_lead/000.png is counted as not correct
 
-    @pending @US-01 @driving_port @real-io @contract-shape:unbounded-preservation
+    @US-01 @driving_port @real-io @contract-shape:unbounded-preservation
     Scenario: An evaluation writes nothing but its declared files
       When Jonas runs the evaluation with pass threshold 0.86
       Then the output folder holds only what a completed evaluation declares
@@ -116,7 +116,7 @@ Feature: See whether any defect passes on the labelled images
         | Good/000.png       |
         | good_old/000.png   |
 
-    @pending @US-01 @driving_port @real-io @contract-shape:pure-function
+    @US-01 @driving_port @real-io @contract-shape:pure-function
     Scenario: An image in a deeper sub-folder keeps its label
       Given a labelled folder with the images good/shift-1/000.png and cut_lead/shift-1/003.png
       And Jev judges good/shift-1/000.png GOOD with P(GOOD) 0.91
@@ -139,7 +139,7 @@ Feature: See whether any defect passes on the labelled images
         | nothing at all                 |
         | only images in unknown folders |
 
-    @pending @US-01 @driving_port @real-io @contract-shape:bounded-change
+    @US-01 @driving_port @real-io @contract-shape:bounded-change
     Scenario: A class without images is still shown, with zero rows
       Given a labelled folder with the images good/000.png and good/001.png
       And Jev judges good/000.png GOOD with P(GOOD) 0.91

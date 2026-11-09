@@ -14,7 +14,6 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /** The pure metrics of DDD-4 and the invariants INV-1 and D17, over named outcome sets and thresholds around the edges. */
-@Disabled("pending: slices 01 and 02, Evaluation and ThresholdSweep (DDD-4)")
 class EvaluationTest {
 
     private static final double[] THRESHOLDS = {0.0, 0.5, 0.6, 0.85, 0.86, 0.875, 0.99, 1.0};
@@ -39,6 +38,7 @@ class EvaluationTest {
         return SETS.entrySet().stream().map(set -> Arguments.of(set.getKey(), set.getValue()));
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @ParameterizedTest(name = "{0} at {2}")
     @MethodSource("setsAndThresholds")
     void the_row_of_the_configured_threshold_equals_the_headline(String name, List<LabelledOutcome> outcomes, double threshold) {
@@ -67,6 +67,7 @@ class EvaluationTest {
         assertThat(evaluation.defectsNotPassed() + evaluation.falsePasses()).isEqualTo(evaluation.defectCount());
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @ParameterizedTest(name = "{0} at {2}")
     @MethodSource("setsAndThresholds")
     void the_sweep_holds_every_hundredth_from_050_to_099_plus_the_configured_threshold(String name, List<LabelledOutcome> outcomes, double threshold) {
@@ -78,6 +79,7 @@ class EvaluationTest {
         }
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @ParameterizedTest(name = "{0}")
     @MethodSource("sets")
     void raising_the_threshold_never_passes_more_images(String name, List<LabelledOutcome> outcomes) {
@@ -87,6 +89,7 @@ class EvaluationTest {
         assertThat(rows).extracting(ThresholdSweep.Row::goodPassed).isSortedAccordingTo((a, b) -> b - a);
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @ParameterizedTest(name = "{0}")
     @MethodSource("sets")
     void the_lowest_safe_threshold_is_safe_and_the_one_below_it_is_not(String name, List<LabelledOutcome> outcomes) {
@@ -103,6 +106,7 @@ class EvaluationTest {
         }
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @Test
     void a_failed_image_never_passes_at_any_threshold() {
         List<LabelledOutcome> outcomes = SETS.get("only failures");
@@ -113,6 +117,7 @@ class EvaluationTest {
         });
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @Test
     void no_outcomes_give_an_empty_evaluation() {
         Evaluation evaluation = Evaluation.of(List.of(), 0.86);
@@ -122,6 +127,7 @@ class EvaluationTest {
         assertThat(evaluation.sweep().lowestSafeThreshold()).hasValue(0.50);
     }
 
+    @Disabled("pending: slice 02, ThresholdSweep (DDD-4)")
     @Test
     void the_us_02_example_gives_the_safe_threshold_083() {
         List<LabelledOutcome> outcomes = List.of(judged(Label.DAMAGED_CASE, "GOOD", 0.82), judged(Label.GOOD, "GOOD", 0.91),

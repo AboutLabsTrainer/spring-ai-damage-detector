@@ -62,7 +62,6 @@ class CliArgumentsTest {
         assertThat(arguments.evaluate()).isFalse();
     }
 
-    @Disabled("pending: slice 05, CliArguments (ADR-005, DDD-33)")
     @Test
     void evaluate_alone_selects_the_evaluation() {
         assertThat(CliArguments.of(new String[] {"--evaluate", "--input=in", "--output=out"}).evaluate()).isTrue();
