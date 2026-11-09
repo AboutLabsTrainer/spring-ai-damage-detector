@@ -29,7 +29,8 @@ public final class ContainerCheck {
         try {
             Process process = builder.start();
             findings = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            process.waitFor();
+            int exitValue = process.waitFor();
+            assertThat(exitValue).as("container-check exit value, findings: %s", findings).isZero();
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         } catch (InterruptedException e) {

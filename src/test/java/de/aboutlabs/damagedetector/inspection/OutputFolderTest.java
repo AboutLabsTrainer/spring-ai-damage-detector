@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assumptions.assumeThat;
 
 import de.aboutlabs.damagedetector.probe.ProbeResult;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
@@ -15,7 +16,11 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** The write port's root rule cannot be reached through the CLI, because relative paths come from the input walk. */
+/**
+ * The write port's root rule cannot be reached through the CLI, because relative paths come from the input walk.
+ *
+ * <p>CONTRACT_SHAPE: external-effect
+ */
 class OutputFolderTest {
 
     @TempDir
@@ -102,7 +107,7 @@ class OutputFolderTest {
 
         OutputFolder output = OutputFolder.rootedAt(root);
 
-        assertThatThrownBy(() -> output.writeString("report.json", "new")).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(() -> output.writeString("report.json", "new")).isInstanceOf(UncheckedIOException.class);
         assertThat(root.resolve("report.json.tmp")).doesNotExist();
     }
 
@@ -115,10 +120,12 @@ class OutputFolderTest {
 
         OutputFolder output = OutputFolder.rootedAt(root);
 
-        assertThatThrownBy(() -> output.writeString("report.md", "new")).isInstanceOf(RuntimeException.class);
-        assertThat(root.resolve("report.md")).content().isEqualTo("the earlier report");
-
-        Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("rwxr-xr-x"));
+        try {
+            assertThatThrownBy(() -> output.writeString("report.md", "new")).isInstanceOf(UncheckedIOException.class);
+            assertThat(root.resolve("report.md")).content().isEqualTo("the earlier report");
+        } finally {
+            Files.setPosixFilePermissions(root, PosixFilePermissions.fromString("rwxr-xr-x"));
+        }
     }
 
     @Test

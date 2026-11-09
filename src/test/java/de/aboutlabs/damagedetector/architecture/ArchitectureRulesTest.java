@@ -150,11 +150,6 @@ class ArchitectureRulesTest {
             .check(PRODUCTION);
     }
 
-    @Test
-    void rule_8_jev_does_not_depend_on_the_root() {
-        allowedEdges().check(PRODUCTION);
-    }
-
     private static LayeredArchitecture allowedEdges() {
         return layeredArchitecture().consideringOnlyDependenciesInLayers()
             .layer("Root").definedBy(ROOT)

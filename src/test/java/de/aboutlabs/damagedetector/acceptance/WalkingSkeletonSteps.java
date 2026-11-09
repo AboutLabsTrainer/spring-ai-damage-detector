@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.util.FileSystemUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -42,7 +43,7 @@ public class WalkingSkeletonSteps {
     private Path inputDir;
     private Path outputDir;
 
-    @Before
+    @Before("@walking_skeleton")
     public void startJevStub() throws IOException {
         jev = new WireMockServer(options().dynamicPort().http2PlainDisabled(true));
         jev.start();
@@ -51,9 +52,10 @@ public class WalkingSkeletonSteps {
         outputDir = workDir.resolve("output");
     }
 
-    @After
-    public void stopJevStub() {
+    @After("@walking_skeleton")
+    public void stopJevStub() throws IOException {
         jev.stop();
+        FileSystemUtils.deleteRecursively(workDir);
     }
 
     @Given("an input folder with one good-looking transistor image and one transistor image with a cut lead")

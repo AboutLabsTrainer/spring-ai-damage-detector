@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.time.Duration;
 import org.junit.jupiter.api.Test;
 
+/** CONTRACT_SHAPE: external-effect */
 class SleeperTest {
 
     @Test
@@ -19,8 +20,12 @@ class SleeperTest {
 
     @Test
     void a_zero_wait_returns_at_once() {
+        long start = System.nanoTime();
+
         Sleeper.realTime().sleep(Duration.ZERO);
         Sleeper.realTime().sleep(Duration.ofMillis(-5));
+
+        assertThat(Duration.ofNanos(System.nanoTime() - start)).isLessThan(Duration.ofMillis(100));
     }
 
     @Test
