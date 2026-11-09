@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
+/** CONTRACT_SHAPE: pure-function */
 class JevJudgementTest {
 
     @Test

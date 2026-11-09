@@ -7,7 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** The suspected class counts as correct only when Jev judged the image and named the ground truth. */
+/**
+ * The suspected class counts as correct only when Jev judged the image and named the ground truth.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class LabelledOutcomeTest {
 
     private static LabelledOutcome judged(Label label, String choice) {

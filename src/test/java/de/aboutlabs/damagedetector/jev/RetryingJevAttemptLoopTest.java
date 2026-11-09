@@ -24,7 +24,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.client.response.DefaultResponseCreator;
 
-/** Every reply script up to three long, for every limit up to four, against a small model of the attempt loop. */
+/**
+ * Every reply script up to three long, for every limit up to four, against a small model of the attempt loop.
+ *
+ * <p>CONTRACT_SHAPE: bounded-change
+ */
 class RetryingJevAttemptLoopTest {
 
     enum Reply { ANSWERS, TRANSIENT, PERMANENT }

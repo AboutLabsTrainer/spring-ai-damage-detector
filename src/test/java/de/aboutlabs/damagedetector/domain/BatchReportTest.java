@@ -8,7 +8,11 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** The summary figures QS reads from a batch (DDD-14/15): counts per verdict, review share, errors and the cost lower bound. */
+/**
+ * The summary figures QS reads from a batch (DDD-14/15): counts per verdict, review share, errors and the cost lower bound.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class BatchReportTest {
 
     private static final PassPolicy POLICY = new PassPolicy(0.86);

@@ -7,7 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** Whether a failed attempt lies behind an outcome decides if its cost is exact or a lower bound (DDD-15). */
+/**
+ * Whether a failed attempt lies behind an outcome decides if its cost is exact or a lower bound (DDD-15).
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class JevOutcomeTest {
 
     private static final JevJudgement JUDGEMENT = new JevJudgement("GOOD", Map.of("GOOD", 0.9), 0.4, 0.001);

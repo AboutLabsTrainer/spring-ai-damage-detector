@@ -9,7 +9,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** The zero-false-pass rule (C10) at its edges. */
+/**
+ * The zero-false-pass rule (C10) at its edges.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class PassPolicyTest {
 
     private static JevOutcome judged(String choice, double pGood) {

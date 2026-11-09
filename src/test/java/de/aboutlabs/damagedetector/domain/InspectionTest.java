@@ -7,7 +7,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** What an inspected image reports: verdict, cost and the human-readable reason (suspected, never certain). */
+/**
+ * What an inspected image reports: verdict, cost and the human-readable reason (suspected, never certain).
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class InspectionTest {
 
     private static final PassPolicy POLICY = new PassPolicy(0.86);

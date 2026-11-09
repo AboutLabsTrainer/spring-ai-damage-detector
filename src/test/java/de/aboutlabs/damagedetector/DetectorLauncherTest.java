@@ -13,6 +13,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.context.ApplicationContextInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 
+/** CONTRACT_SHAPE: external-effect */
 class DetectorLauncherTest {
 
     @TempDir

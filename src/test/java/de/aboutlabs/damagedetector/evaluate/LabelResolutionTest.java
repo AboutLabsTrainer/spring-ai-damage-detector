@@ -7,7 +7,11 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** Label resolution is a pure function of the relative path (DDD-13). */
+/**
+ * Label resolution is a pure function of the relative path (DDD-13).
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class LabelResolutionTest {
 
     @ParameterizedTest

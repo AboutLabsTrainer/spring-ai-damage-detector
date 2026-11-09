@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 
+/** CONTRACT_SHAPE: bounded-change */
 class RetryingJevTest {
 
     private final JevAdapterFixture fixture = new JevAdapterFixture();

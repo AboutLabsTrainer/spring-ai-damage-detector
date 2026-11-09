@@ -6,7 +6,11 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** The headline figures of DDD-4/15/16: per-class table (recall = not passed), judged/error counts and the cost lower bound. */
+/**
+ * The headline figures of DDD-4/15/16: per-class table (recall = not passed), judged/error counts and the cost lower bound.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class EvaluationFiguresTest {
 
     private static LabelledOutcome judged(Label label, String choice, double pGood, double cost, int attempts) {
