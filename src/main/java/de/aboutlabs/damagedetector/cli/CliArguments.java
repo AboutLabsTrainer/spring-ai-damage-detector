@@ -40,7 +40,10 @@ public final class CliArguments {
             return Optional.of("--evaluate takes no value");
         }
         boolean known = ALLOWED.contains(name) || (name.startsWith("--") && name.contains("."));
-        return known ? Optional.empty() : Optional.of("unknown option " + name);
+        if (known) {
+            return Optional.empty();
+        }
+        return Optional.of(name.startsWith("--") ? "unknown option " + name : "unknown option: an argument without --");
     }
 
     private static ProbeResult usage(String problem) {

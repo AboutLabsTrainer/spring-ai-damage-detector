@@ -21,7 +21,7 @@ public record DetectorProperties(@DefaultValue("0.87") String passThreshold, @De
 
         @Override
         public String toString() {
-            return "Jev[baseUrl=" + baseUrl + ", model=" + model + ", apiKey=***]";
+            return "Jev[baseUrl=***, model=" + model + ", apiKey=***]";
         }
     }
 

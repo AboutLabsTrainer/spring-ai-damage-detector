@@ -9,13 +9,29 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-/** Bootstrap step 1 (DDD-12): a typo must never turn into a paid run, and allowed options must never be refused. */
+/**
+ * Bootstrap step 1 (DDD-12): a typo must never turn into a paid run, and allowed options must never be refused.
+ *
+ * <p>CONTRACT_SHAPE: pure-function
+ */
 class CliArgumentsTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"evalute", "evaluat", "evaluates", "Evaluate", "inputs", "dry-run", "help"})
     void an_unknown_option_is_refused_and_named(String option) {
         assertUsageRefusal(new String[] {"--input=in", "--output=out", "--" + option}, "unknown option --" + option);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"s3cret", "s3cret=hunter2", "-x", "sk-or-v1-abc"})
+    void an_argument_without_dashes_is_refused_without_echoing_it(String argument) {
+        assertUsageRefusal(new String[] {"--input=in", "--output=out", argument}, "unknown option: an argument without --");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"bogus=hunter2", "bogus=sk-or-v1-abc"})
+    void an_unknown_option_with_a_value_echoes_only_its_name(String option) {
+        assertUsageRefusal(new String[] {"--input=in", "--output=out", "--" + option}, "unknown option --bogus");
     }
 
     @ParameterizedTest
