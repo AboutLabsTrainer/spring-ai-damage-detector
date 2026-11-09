@@ -1,0 +1,481 @@
+{
+  "roadmap": {
+    "project_id": "transistor-damage-detection",
+    "created_at": "2026-11-06T11:36:18Z",
+    "total_steps": 14
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Spring Boot 4.1, bootstrap and enforcement foundation",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Upgrade to Spring Boot 4.1 with walking skeleton green",
+          "criteria": [
+            "./mvnw verify passes on Spring Boot 4.1 with the walking skeleton green, including its check that no file or folder name is sent to Jev.",
+            "ApplicationDefaultsContractTest's key and log guard stays green.",
+            "Static gate (pom.xml review, Maven Central lookup): exact Boot 4.1 patch pinned; Cucumber, WireMock, ArchUnit and PIT versions verified against its JUnit and recorded.",
+            "Static gate (grep of src for com.fasterxml.jackson.databind): no project code, main or test, uses Jackson 2 databind; reports keep their JSON content.",
+            "Static gate (grep of application.yml): no spring.http.client key remains; Jev limits (10 s, 30 s) come from detector.jev settings."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/walking-skeleton.feature",
+          "scenario_name": "A good-looking part passes and a part with a cut lead is documented as scrap",
+          "agent": "nw-software-crafter",
+          "deps": [],
+          "files_to_modify": [
+            "pom.xml",
+            "src/main/resources/application.yml",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorProperties.java",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorConfiguration.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/OpenRouterJev.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/ReportWriter.java",
+            "src/test/java/de/aboutlabs/damagedetector/acceptance/WalkingSkeletonSteps.java"
+          ],
+          "implementation_notes": "ADR-006, DDD-27, DDD-37, OQ-6. Removing spring.http.client would leave real runs without limits, so the existing adapter applies detector.jev.* until 04-01. WalkingSkeletonSteps: only JSON import and mapper change. Add ArchUnit here; PIT follows in 01-03. The WireMock version also pins the 06-02 image. Fallback: newest compatible versions, pinned. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "01-02",
+          "name": "Bootstrap launcher, single file ports and first real-jar scenario",
+          "criteria": [
+            "The real jar inspects a folder, prints only the agreed summary line with the output path as typed, reports no problem and exits 0.",
+            "A completed batch adds only its declared files, including damage-detector.log, keeps files already in the output folder unchanged and leaves the input tree unchanged.",
+            "Only .png, .jpg and .jpeg images, upper or lower case, are inspected; other files in the input are ignored.",
+            "report.json and report.md carry the agreed batch fields: jevCost replaces totalCost, plus judged, jevErrors and costIsLowerBound.",
+            "Console logging stays off by default and --debug changes no results; the real-jar suite fails when it finds no scenario."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature",
+          "scenario_name": "Batch result can be read from the command line | Details on the console change nothing about the result | PNG and JPEG images are inspected and other files are ignored | A folder that already holds files keeps them | LogSinkTest#the_log_file_lies_directly_in_the_output_folder | OutputFolderTest#writes_below_its_root_and_creates_the_folders_on_the_way | OutputFolderTest#rejects_a_path_that_leaves_the_root | OutputFolderTest#writes_bytes_unchanged | OutputFolderTest#rejects_bytes_for_a_path_that_leaves_the_root | OutputFolderTest#the_probe_creates_the_folder_and_leaves_no_probe_file | OutputFolderTest#the_real_root_follows_a_shortcut | CliArgumentsTest#input_and_output_keep_their_values_in_either_order",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "01-01"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/DamageDetectorApplication.java",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorLauncher.java",
+            "src/main/java/de/aboutlabs/damagedetector/LogSink.java",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorConfiguration.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/DetectorCommand.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/BatchCommand.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/CliArguments.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/ImageFolder.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/ImageFolder.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/OutputFolder.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/Inspector.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/BatchInspection.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/ReportWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/Inspection.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/PassPolicy.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/BatchReport.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/JevOutcome.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/Sleeper.java",
+            "src/main/java/de/aboutlabs/damagedetector/probe/Probe.java",
+            "src/main/java/de/aboutlabs/damagedetector/probe/ProbeResult.java",
+            "src/main/resources/application.yml",
+            "src/test/java/de/aboutlabs/damagedetector/acceptance/DrivingAdapterAcceptanceIT.java",
+            "src/test/java/de/aboutlabs/damagedetector/LogSinkTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/inspection/OutputFolderTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/CliArgumentsTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature"
+          ],
+          "implementation_notes": "DDD-28, DDD-30, Q11. LogSink moves here from slice 05: the completed-batch universe requires the log. Happy path only; refusals land in 05-01 and 05-02. Inspector reads through ImageFolder and wraps the old port result as Judged until 04-01. Use cases take folders and PassPolicy per run. ImageFolder and OutputFolder implement Probe. DetectorCommand must run without the bootstrap: the skeleton skips it. Move class-level @Disabled to methods. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "01-03",
+          "name": "ArchUnit rules, CI workflow and PIT mutation precursor",
+          "criteria": [
+            "Process gate (seeded violation per rule, ./mvnw verify): each active rule fails once on a violation, and any violation fails the build.",
+            "Static gate (ArchitectureRulesTest listing): rules 1 to 4, 6, 7 and 8 are active; rule 5 and rule 8's jev-to-root edge stay visibly pending until 04-01.",
+            "Static gate (workflow lint): verify and mutation run on pull requests, verify on pushes to main, with read-only permissions, no secrets and SHA-pinned actions.",
+            "Static gate (workflow lint): the verify job scans the full git history and fails on a secret; a live run waits for a remote.",
+            "Process gate (local PIT run): changed classes are gated at an 80 % kill rate, using JUnit tests only and leaving out the wiring classes."
+          ],
+          "test_file": "src/test/java/de/aboutlabs/damagedetector/architecture/ArchitectureRulesTest.java",
+          "scenario_name": "ArchitectureRulesTest: rules 1 to 8 of DDD-17",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "src/test/java/de/aboutlabs/damagedetector/architecture/ArchitectureRulesTest.java",
+            ".github/workflows/ci.yml",
+            "pom.xml"
+          ],
+          "implementation_notes": "DDD-17; DEVOPS CI and mutation sections; item 15. DISTILL wrote no rule tests, so this step writes them. OpenRouterJev keeps implements Jev and its DetectorProperties import until 04-01: keep rule 5 and the edge @Disabled with that reason. No remote exists, so run verify and PIT locally. PIT counts acceptance-only classes as uncovered: list those for the user. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice 01: evaluate the labelled set",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Evaluate mode scores a labelled folder",
+          "criteria": [
+            "--evaluate on a labelled folder writes evaluation.md, evaluation.json and one summary line with false passes, good auto-pass and defects not passed.",
+            "Recall counts images not passed; the correct suspected class is counted separately.",
+            "The class table shows every defect class in fixed order, with zero rows for a class without images.",
+            "The label is the exact first path segment below the input, however deep the image lies.",
+            "A completed evaluation leaves only its two records and the log: no scrap or review copies, and the input is unchanged."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature",
+          "scenario_name": "Presenter sees zero false passes on the labelled set | Presenter sees how many good parts pass automatically | Presenter sees the recall of each defect class | A wrong suspected class does not count as correct | An evaluation writes nothing but its declared files | An image in a deeper sub-folder keeps its label | A class without images is still shown, with zero rows | LabelResolutionTest (all methods) | EvaluationTest#a_false_pass_is_a_defect_jev_called_good_at_or_above_the_threshold | EvaluationTest#counts_add_up | CliArgumentsTest#evaluate_alone_selects_the_evaluation",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "01-03"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/cli/DetectorCommand.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/CliArguments.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/LabelledEvaluation.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/EvaluationWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/Evaluation.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/Label.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/LabelledOutcome.java",
+            "src/test/java/de/aboutlabs/damagedetector/domain/EvaluationTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/evaluate/LabelResolutionTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/CliArgumentsTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature"
+          ],
+          "implementation_notes": "DDD-3, DDD-13, DDD-14 (field names ratified; sweep fields land in 03-01). Reuse Inspector. A label is resolved only in evaluate/, as a pure function. LabelledEvaluation: orchestration, no direct IO. EvaluationWriter: bounded change through OutputFolder. Until 04-01 a Jev failure aborts the run. Move EvaluationTest's class-level @Disabled to methods. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "02-02",
+          "name": "False passes, label privacy and labelled-folder refusal",
+          "criteria": [
+            "A defect judged GOOD at or above the threshold is listed with path and P(GOOD); the run prints one stderr line and exits 2.",
+            "With threshold 0.86, a defect at P(GOOD) 0.85 is REVIEW and the run exits 0; at exactly 0.86 it is a false pass.",
+            "No Jev request carries a file name, relative path, label with separator or input folder name; apart from the image data, requests are identical.",
+            "An image without an exact label is counted as skipped and never sent to Jev.",
+            "A folder without labelled images gets the line naming the five sub-folders, exit 1, no Jev call and only the log written."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature",
+          "scenario_name": "A defect that passes is named as a false pass | A false pass is also reported as a problem | The false-pass line sits exactly at the pass threshold | The class table separates recall from the suspected class | Folder names are only used for scoring | An image without a label is skipped, counted and not sent to Jev | A folder without labels is refused before any cost | ErrorFeedbackTest#a_false_pass_points_to_the_evaluation",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "02-01"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/cli/DetectorCommand.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/ErrorFeedback.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/LabelledEvaluation.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/EvaluationWriter.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/ErrorFeedbackTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature"
+          ],
+          "implementation_notes": "D18, Q7, DDD-13, DDD-24, DDD-33, UC-2, UC-3. First non-zero exits: report them through ExitCodeGenerator. ErrorFeedback stays pure and gains only its exit-2 line and the NO_LABELLED_IMAGES text; the full table lands in 05-01. Move ErrorFeedbackTest's class-level @Disabled to methods. \"A defect that passes\" runs on the real jar, so exit 2 must reach the process. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "02-03",
+          "name": "Evaluation evidence, golden response and real 253-image run",
+          "criteria": [
+            "evaluation.md and evaluation.json state the run date, Jev cost and elapsed seconds; evaluation.md adds the SPIKE disclosure and ends with the MVTec AD attribution.",
+            "Re-running into the same folder replaces both evaluation records as a whole and leaves other files untouched.",
+            "Static gate (file review, grep for the key prefix): src/test/resources/jev/golden-response.json holds one real, unmodified Jev response and no key.",
+            "Closing gate (brief entry): the slice-01 brief holds summary line, per-class table, date, cost and time of the full 253-image run, or a user waiver.",
+            "Static gate (grep of README.md): it shows the evaluate command and the exit codes 0, 1 and 2."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature",
+          "scenario_name": "Evaluation result can be read from the command line | The evaluation keeps its cost and duration as evidence | The evaluation names its run date | The evaluation says what its defect images can and cannot prove | The evaluation names the source of the sample data | Running the evaluation again replaces the earlier record",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "02-02"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/LabelledEvaluation.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/EvaluationWriter.java",
+            "src/test/resources/jev/golden-response.json",
+            "README.md",
+            "docs/feature/transistor-damage-detection/slices/slice-01-evaluate-labelled-set.md",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-1-evaluate-labelled-set.feature"
+          ],
+          "implementation_notes": "D26, K1, K5, OQ-5, item 8. Real calls: load .env with set -a; never print, log or pass the key as an argument. About $0.04, 5 min. Exit 2 is a finding, not a step failure: record it and tell the user. Rerun budget: up to 2 reruns if a Jev failure aborts the run (about $0.04 each). Golden: one raw call on one image, unmodified; its test runs in 04-01. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice 02: threshold sweep",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Threshold sweep from one Jev pass",
+          "criteria": [
+            "evaluation.json holds a sweep row for every threshold 0.50 to 0.99 plus the configured value; evaluation.md shows 0.80 to 0.95 plus the configured value.",
+            "The row of the configured threshold equals the headline numbers, also for an off-grid value such as 0.875.",
+            "The evaluation names the lowest threshold with 0 false passes, or says none up to 0.99 exists.",
+            "Jev is called once per labelled image whatever the sweep size, and the tool never changes the configured threshold.",
+            "Closing gate (brief entry): the slice-02 brief holds summary line, date, cost and sweep of a real 253-image run, plus the user's threshold decision, or a user waiver."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-2-threshold-sweep.feature",
+          "scenario_name": "Presenter sees the trade-off between false passes and auto-passed good parts | A defect above the configured threshold moves the safe threshold | Presenter is told when no threshold is safe | Every threshold is safe when no defect is judged GOOD | The sweep costs no extra Jev calls | The row of the configured threshold equals the headline | The sweep record is complete and the readable table stays short | The chosen threshold applies to the next batch | The tool never moves the threshold on its own | EvaluationTest#the_row_of_the_configured_threshold_equals_the_headline | EvaluationTest#the_sweep_holds_every_hundredth_from_050_to_099_plus_the_configured_threshold | EvaluationTest#raising_the_threshold_never_passes_more_images | EvaluationTest#the_lowest_safe_threshold_is_safe_and_the_one_below_it_is_not | EvaluationTest#a_failed_image_never_passes_at_any_threshold | EvaluationTest#no_outcomes_give_an_empty_evaluation | EvaluationTest#the_us_02_example_gives_the_safe_threshold_083",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "02-03"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/domain/Evaluation.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/ThresholdSweep.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/EvaluationWriter.java",
+            "README.md",
+            "docs/feature/transistor-damage-detection/slices/slice-02-threshold-sweep.md",
+            "src/test/java/de/aboutlabs/damagedetector/domain/EvaluationTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-2-threshold-sweep.feature"
+          ],
+          "implementation_notes": "D17, DDD-4, DDD-14 items 9 and 10, K2. Pure recomputation over stored outcomes, in hundredths. This needs a second paid run (about $0.04): the 02-03 record has no sweep. The threshold decision is the user's: record the evidence and ask; change no default alone. Rerun budget: up to 2 reruns if a Jev failure aborts the run (about $0.04 each). A batch into the same folder must keep the evaluation files. @sizing-review-needed. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice 03: Jev failure resilience",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Retry decorator: failed images reach REVIEW, batch continues",
+          "criteria": [
+            "An image failing on every attempt becomes REVIEW with the pinned description, a copy and a .txt, and the remaining images are still inspected.",
+            "Transient failures are retried up to the attempt limit; other 4xx end after one attempt; a later success gives the normal verdict and no Jev error.",
+            "An unreadable or invalid answer is transient: retried to the attempt limit, then REVIEW with unreadable answer, never a verdict, whatever its P(GOOD).",
+            "With 2 of 10 images failing, reports and summary agree (3 PASS, 4 SCRAP, 3 REVIEW, 2 Jev errors, 8 judged); report.json marks each errored image.",
+            "The golden test asserts the parsed verdict and P(GOOD) of the recorded answer; ArchUnit rule 5 and the jev-to-root edge are enabled and green."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature",
+          "scenario_name": "Batch completes and counts a failed image | A brief Jev outage does not change the verdict | A failure that may pass goes away is retried, then the image goes to REVIEW | A failure that cannot go away is not retried | An image Jev does not answer in time goes to REVIEW and the batch goes on | An image whose connection breaks goes to REVIEW | An answer that cannot be trusted never becomes a verdict | A garbled answer followed by a good one gives the normal verdict | The batch of ten reports every image | The report says how many images Jev judged | A failed image carries no Jev choice | OpenRouterJevAdapterTest (all 10 methods, including a_recorded_real_answer_is_understood) | RetryingJevAttemptLoopTest#the_attempt_loop_stops_at_the_first_answer_the_first_final_failure_or_the_limit | RetryingJevTest#a_first_time_success_counts_one_attempt | RetryingJevTest#a_success_after_a_failure_is_a_normal_judgement | ApplicationDefaultsContractTest#the_jev_time_limits_and_the_retry_defaults_are_the_agreed_ones",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "03-01"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/domain/Jev.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/OpenRouterJev.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/RetryingJev.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/AttemptSource.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/AttemptResult.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/Inspector.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/ReportWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorConfiguration.java",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorProperties.java",
+            "src/main/resources/application.yml",
+            "src/test/java/de/aboutlabs/damagedetector/architecture/ArchitectureRulesTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/jev/OpenRouterJevAdapterTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/jev/RetryingJevTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/jev/RetryingJevAttemptLoopTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/ApplicationDefaultsContractTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature"
+          ],
+          "implementation_notes": "ADR-004, DDD-5, 6, 19, 26, 35, 36; items 12, 13, 20. Jev port returns JevOutcome; Inspector drops its wrapper. Remove implements Jev, the DetectorProperties constructor and judge() from OpenRouterJev. Build the client at the first attempt. Until 05-02 no key check exists: a missing key means 401s, then REVIEW. Move RetryingJevTest and RetryingJevAttemptLoopTest class-level @Disabled to methods, keeping later-step methods disabled. @sizing-review-needed. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "04-02",
+          "name": "Growing waits, Retry-After and cost as lower bound",
+          "criteria": [
+            "Waits between attempts double from the initial backoff and stop at the longest allowed wait; no wait follows the last attempt.",
+            "A Retry-After within the limit replaces the backoff, an unusable one is ignored, and one above the limit ends the attempts at once with the pinned reason.",
+            "The attempts per image are configurable, and the description states the real count in correct singular or plural.",
+            "After any failed attempt, even one followed by a success, batch and evaluation outputs mark the cost as a lower bound.",
+            "Without a failed attempt the cost is exact and the words lower bound appear nowhere."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature",
+          "scenario_name": "The waits between attempts grow | The waits stop growing at the longest allowed wait | The number of attempts is configurable | Jev's own request to wait is honoured up to the longest allowed wait | A request to wait longer than allowed ends the attempts at once | After a failed image the cost is shown as a lower bound | A success after a failed attempt also shows the cost as a lower bound | Without failed attempts the cost is exact | After failed attempts the evaluation shows its cost as a lower bound | RetryingJevAttemptLoopTest#every_retry_is_preceded_by_one_wait_that_never_shrinks_or_exceeds_the_cap | RetryingJevTest#waits_double_from_the_initial_backoff | RetryingJevTest#waits_stop_growing_at_the_maximum_backoff | RetryingJevTest#there_is_no_wait_after_the_last_attempt | RetryingJevTest#a_retry_after_that_is_no_whole_number_of_seconds_is_ignored | RetryingJevTest#a_retry_after_within_the_cap_replaces_the_backoff | RetryingJevTest#a_retry_after_above_the_cap_gives_up_at_once | RetryingJevTest#the_attempt_count_of_a_late_give_up_is_the_real_one",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "04-01"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/jev/RetryingJev.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/OpenRouterJev.java",
+            "src/main/java/de/aboutlabs/damagedetector/domain/BatchReport.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/ReportWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/EvaluationWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/DetectorCommand.java",
+            "src/test/java/de/aboutlabs/damagedetector/jev/RetryingJevTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/jev/RetryingJevAttemptLoopTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature"
+          ],
+          "implementation_notes": "ADR-004, DDD-6, 7, 15, Q3. The cost of failed attempts is unknown and not counted. In-process scenarios record waits with the fake sleeper; the real sleeper runs in real-jar scenarios with 1 ms waits. Plain doubling may already pass after 04-01: the cap and Retry-After are this step's RED. RetryingJevTest, RetryingJevAttemptLoopTest: lift only this step's method-level @Disabled, keeping later-step methods disabled. @sizing-review-needed. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "04-03",
+          "name": "Nothing-judged guard, interrupted runs and atomic reports",
+          "criteria": [
+            "When no image was judged, batch and evaluation still write their reports, print the line naming OPENROUTER_API_KEY and the network, and exit 3.",
+            "A run stopped by Ctrl-C or a stop request ends with 130 or 143 and leaves no finished report, only its declared files; exit 137 is a manual check.",
+            "Every report appears whole under its final name, the .md record last; a failed replacement keeps the old file and no temp file remains.",
+            "The API key appears nowhere in console output, log or reports, with or without --debug.",
+            "Closing gate (brief entry): the slice-03 brief holds summary line, date and cost of a 10-image run with ~10 s network loss and ≥1 Jev error, or a user waiver."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature",
+          "scenario_name": "Petra is warned when no image could be judged | Petra is warned when Jev cannot be reached at all | The evaluation warns when no image could be judged | The evaluation counts a failed image as not passed at every threshold | An interrupted run leaves no finished report | The API key never shows up in what the detector leaves behind | OutputFolderTest#a_write_leaves_no_temp_file | OutputFolderTest#a_failed_write_deletes_its_temp_file | OutputFolderTest#a_failed_replacement_leaves_the_old_file_whole | ErrorFeedbackTest#no_image_judged_names_the_key_and_the_network | ErrorFeedbackTest#a_completed_run_ends_with_its_code_and_nothing_judged_wins_over_false_pass",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "04-02"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/inspection/OutputFolder.java",
+            "src/main/java/de/aboutlabs/damagedetector/batch/ReportWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/evaluate/EvaluationWriter.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/DetectorCommand.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/ErrorFeedback.java",
+            "README.md",
+            "docs/feature/transistor-damage-detection/slices/slice-03-jev-failure-resilience.md",
+            "src/test/java/de/aboutlabs/damagedetector/inspection/OutputFolderTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/ErrorFeedbackTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-3-jev-failure-resilience.feature"
+          ],
+          "implementation_notes": "D14, D25, DDD-16, DDD-34, INV-3, INV-6, DEVOPS interrupt contract. No signal handler: the JVM sets the codes. Publish copies and .txt, then the .json, then the .md. Exit 3 outranks 2. Exit 137: manual kill -9 check, because SIGKILL cannot be trapped; record it in the brief. If you cannot cut the network, ask the user for a hand run or waiver. README: exits 3, 130, 143, 137 and the fresh-folder rerun. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Slice 05: refusal feedback",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "Refuse bad command lines and unusable output before writing",
+          "criteria": [
+            "Missing options, an unknown option or a value after --evaluate give the usage line naming the problem, exit 1, no Jev call and nothing written.",
+            "A typo such as --evalute can never start a paid run; dotted properties and the debug and trace flags stay allowed.",
+            "An input folder that does not exist or is a file is refused with its path as typed.",
+            "An output equal to or inside the input is refused before any write, also through a symlink or .. across missing folders.",
+            "An output that is read-only, a file or below a file gets the cannot-write line with its cause, and no log file appears."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-5-refusal-feedback.feature",
+          "scenario_name": "A mistake on the command line is refused before anything is written | An output folder that cannot be written is refused | CliArgumentsTest#an_unknown_option_is_refused_and_named | CliArgumentsTest#a_dotted_property_is_allowed | CliArgumentsTest#a_value_after_evaluate_is_refused | CliArgumentsTest#a_missing_folder_is_named | CliArgumentsTest#no_arguments_at_all_are_refused | CliArgumentsTest#the_spring_flags_debug_and_trace_are_allowed | ErrorFeedbackTest#every_refusal_gives_its_line_and_exit_1 | ErrorFeedbackTest#every_refusal_reason_has_a_line | ErrorFeedbackTest#before_the_log_exists_the_line_does_not_point_to_it | OutputFolderTest#the_probe_refuses_a_read_only_folder | OutputFolderTest#the_probe_overwrites_a_leftover_probe_file_from_a_killed_run",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "04-03"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/DetectorLauncher.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/CliArguments.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/ErrorFeedback.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/ImageFolder.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/OutputFolder.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/CliArgumentsTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/ErrorFeedbackTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/inspection/OutputFolderTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-5-refusal-feedback.feature"
+          ],
+          "implementation_notes": "ADR-005 decisions 1 and 2, DDD-10, 12, 22, 31, 33. The argument and real-path checks return a ProbeResult and write nothing; only DetectorLauncher acts on it. Follow brief.md bootstrap step 2 exactly for real paths. The full refusal table lands here. Lines before bootstrap step 5 never mention the log. Read-only rows need a non-root user. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "05-02",
+          "name": "Refuse unusable settings after start; one-line unexpected failures",
+          "criteria": [
+            "An input without images gets the pinned line, exit 1, no Jev call and only the log in the output folder.",
+            "A threshold outside 0 to 1 or not a number is refused with its value echoed, before any image is judged.",
+            "A missing or blank API key, then an unusable Jev address, is refused without a Jev call; the address is never echoed.",
+            "An unexpected failure gives one line ending See log for details, exit 1 and no console stack trace; the log holds the details.",
+            "Closing gate (brief entry): the slice-05 brief holds the lines for a mistyped folder, --evalute, --output=images/out and threshold 1.5, with date and no new cost, or a user waiver."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-5-refusal-feedback.feature",
+          "scenario_name": "An input folder without images is refused | A missing API key is refused before any cost | An unusable pass threshold is refused | An unusable Jev address is refused before any cost | An unexpected failure gives one line and leaves the details in the log | PassThresholdTest (all methods) | RetryingJevTest#the_probe_accepts_a_key_and_a_usable_address_without_calling_jev | RetryingJevTest#the_probe_refuses_a_blank_key | RetryingJevTest#the_probe_refuses_an_unusable_address | RetryingJevTest#the_key_is_checked_before_the_address | ErrorFeedbackTest#an_unexpected_exception_points_to_the_log | ErrorFeedbackTest#an_exception_without_a_message_is_named_by_its_type | ErrorFeedbackTest#only_the_first_line_of_a_cause_is_shown",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "05-01"
+          ],
+          "files_to_modify": [
+            "src/main/java/de/aboutlabs/damagedetector/DetectorProperties.java",
+            "src/main/java/de/aboutlabs/damagedetector/DetectorConfiguration.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/DetectorCommand.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/PassThreshold.java",
+            "src/main/java/de/aboutlabs/damagedetector/cli/ErrorFeedback.java",
+            "src/main/java/de/aboutlabs/damagedetector/inspection/ImageFolder.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/RetryingJev.java",
+            "src/main/java/de/aboutlabs/damagedetector/jev/OpenRouterJev.java",
+            "README.md",
+            "docs/feature/transistor-damage-detection/slices/slice-05-refusal-feedback.md",
+            "src/test/java/de/aboutlabs/damagedetector/cli/PassThresholdTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/cli/ErrorFeedbackTest.java",
+            "src/test/java/de/aboutlabs/damagedetector/jev/RetryingJevTest.java",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-5-refusal-feedback.feature"
+          ],
+          "implementation_notes": "ADR-005 decisions 1 and 4, DDD-10, 32, 33. Bind the threshold as raw text; DetectorCommand hands the policy to the run. Keep the 0.86 default. Inject the Jev-side check as plain probe.Probe; cli never sees jev. Order: threshold, input, key, address. Hand run on images/; ask the user to confirm no new OpenRouter cost. RetryingJevTest: lift the remaining @Disabled. PassThresholdTest: drop its class-level @Disabled; it has no later-step methods. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "name": "Slice 04: Docker run",
+      "steps": [
+        {
+          "id": "06-01",
+          "name": "Half A: Docker image, self-test, key scan, demo commands",
+          "criteria": [
+            "Process gate (docker build, docker image inspect): the image builds with Docker only, runs as a non-root user and accepts the jar's flags.",
+            "Process gate (scripts/container-check.sh --self-test): it reports FAIL on a deliberately bad image before any Docker scenario is enabled.",
+            "The shared image holds no key, .env or key name in its configuration, history, layers or jar.",
+            "Running the check leaves the real .env byte-identical on every exit path and never prints it.",
+            "Closing gate (brief entry): the slice-04 brief holds summary line, date and cost of the documented batch command on at least 5 real images, or a user waiver."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-4-docker-run.feature",
+          "scenario_name": "The shared Docker image carries no API key | Checking the image leaves Jonas's own key file alone",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "05-02"
+          ],
+          "files_to_modify": [
+            "Dockerfile",
+            ".dockerignore",
+            "scripts/container-check.sh",
+            "README.md",
+            "docs/feature/transistor-damage-detection/slices/slice-04-docker-run.md",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-4-docker-run.feature"
+          ],
+          "implementation_notes": "DEVOPS Docker contract, CI/CD outline steps 1 to 3 and 7; K4, Q4, item 19. Self-test first, then the image-scan check. Re-check the Temurin patch and digests. No key in ENV, ARG or --build-arg. README: demo commands with the outside guard. Manual Ctrl-C check: exit 130, no report.md. Run with -Dacceptance.inprocess.tags=@container, outside ./mvnw verify. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        },
+        {
+          "id": "06-02",
+          "name": "Half B: container parity, contract rows, image job, rollback",
+          "criteria": [
+            "Docker and jar runs on the same stubbed Jev answers give equal verdict counts and the same output files; evaluation works in Docker too.",
+            "Docker passes on the run endings: missing key and forgotten output mount 1, all calls rejected 3, false pass 2.",
+            "A marked key appears nowhere in results or console after a stub run with details on.",
+            "The invoking user can delete everything in the output folder without extra rights.",
+            "A rollback to the previous SHA tag runs one fixture, and pull requests and main run the check in the image job."
+          ],
+          "test_file": "src/test/resources/features/transistor-damage-detection/acceptance/milestone-4-docker-run.feature",
+          "scenario_name": "Presenter gets the usual report from Docker | Presenter gets the evaluation from Docker | The API key leaves no trace of a Docker run | A missing key is reported before any work | Docker passes on the nothing-judged signal | Docker passes on the false-pass signal | Presenter can delete what Docker wrote | A forgotten output folder is refused",
+          "agent": "nw-software-crafter",
+          "deps": [
+            "06-01"
+          ],
+          "files_to_modify": [
+            "scripts/container-check.sh",
+            ".github/workflows/ci.yml",
+            "docs/feature/transistor-damage-detection/slices/slice-04-docker-run.md",
+            "src/test/resources/features/transistor-damage-detection/acceptance/milestone-4-docker-run.feature"
+          ],
+          "implementation_notes": "DEVOPS CI/CD outline steps 4 to 6, deployment strategy. Keep the WireMock image equal to wiremock.version from 01-01 and re-check its digest. --detector.jev.base-url is the only stub switch. The script never writes the working tree. Record the rollback drill in the slice-04 brief. No SCAFFOLD marker may remain in src/main or scripts. @sizing-review-needed. TEST PARADIGM: JUnit @ParameterizedTest example tables and exhaustive finite sets at layer 1; Cucumber scenarios at acceptance; StateDelta universe assertions per DISTILL. Do not add a PBT library."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/main/java/de/aboutlabs/damagedetector/",
+      "src/main/resources/",
+      "scripts/",
+      ".github/workflows/"
+    ],
+    "test_directories": [
+      "src/test/java/de/aboutlabs/damagedetector/",
+      "src/test/resources/"
+    ],
+    "excluded_patterns": [
+      "target/**",
+      "images/**",
+      "out/**",
+      ".env",
+      ".env.*"
+    ]
+  },
+  "validation": {
+    "status": "approved",
+    "reviewer": "nw-acceptance-designer-reviewer",
+    "approved_at": "2026-11-06T11:53:36Z"
+  }
+}

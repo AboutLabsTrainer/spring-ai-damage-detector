@@ -1276,6 +1276,8 @@ Closes DISTILL gap C7b (user decision Q5; D25, INV-6, DDD-34). The tool adds no 
 
 ## Wave: DEVOPS / [REF] Mutation testing strategy
 
+**Scope (user decision 2026-11-06):** PIT is limited to classes with direct tests (domain, `jev/`, `cli/` logic, `OutputFolder`). Classes covered only by Cucumber scenarios are outside the 80 % gate, because PIT does not count Cucumber.
+
 **Per-feature** (already in `CLAUDE.md`): PIT runs after refactoring in each delivery, on modified files only, with a kill rate gate of ≥ 80 %. This fits a codebase far below 50k LOC.
 
 - **Scope:** production Java classes added or modified against the base branch: `git diff --name-only --diff-filter=AM origin/main...HEAD -- 'src/main/java/*.java'`, mapped to class names and passed as `-DtargetClasses`. No such file means the job passes without running PIT. A locally computed list is used rather than `scmMutationCoverage`, which would need a `<scm>` block.
